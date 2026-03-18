@@ -1,18 +1,34 @@
-CC      = gcc
-CFLAGS  = -Wall -Wextra -O2
-TARGET  = app
-SRCS    = $(wildcard src/*.c)
-OBJS    = $(SRCS:.c=.o)
+# Made with Claude
+# --- Configuration -----------------------------------------------------------
+CC      := gcc
+CFLAGS  := -Wall -Wextra -O2
+TARGET  := app
 
-all: $(TARGET)
+# --- Paths -------------------------------------------------------------------
+SRC_DIR := src
+OUT_DIR := out
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+SRCS    := $(wildcard $(SRC_DIR)/*.c)
+OBJS    := $(patsubst $(SRC_DIR)/%.c, $(OUT_DIR)/%.o, $(SRCS))
+BIN     := $(OUT_DIR)/$(TARGET)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $
+# --- Rules -------------------------------------------------------------------
+.PHONY: all clean
+
+all: $(BIN)
+	@echo "Built $(BIN)"
+
+# Link
+$(BIN): $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
+
+# Compile - create out/ automatically if it doesn't exist
+$(OUT_DIR)/%.o: $(SRC_DIR)/%.c | $(OUT_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Create out/ directory
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
 
 clean:
-	rm -f $(OBJS) $(TARGET)
-
-.PHONY: all clean
+	rm -rf $(OUT_DIR)
