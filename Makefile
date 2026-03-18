@@ -1,7 +1,10 @@
 # Made with Claude
 # --- Configuration -----------------------------------------------------------
 CC      := gcc
-CFLAGS  := -Wall -Wextra -O2
+OPT	:= -O0 -g3
+CFLAGS  := -Wall -Wextra -fsanitize=address,leak,undefined \
+	   $(OPT) -std=c23 -Wpedantic
+LDFLAGS	:= -I$(SRC_DIR)
 TARGET  := app
 
 # --- Paths -------------------------------------------------------------------
