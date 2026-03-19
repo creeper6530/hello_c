@@ -1,5 +1,2 @@
-# Symlink
-app
-
-# Output dir
 out/
+.vscode/settings.json

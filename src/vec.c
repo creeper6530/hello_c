@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "vec.h" // Struct is in header
+#include "vec.h" // Struct is in header (so that functions can return it by value)
 
 Vec vec_new(void) {
     Vec new_vec = {nullptr, 0, 0};
@@ -22,13 +22,22 @@ Vec vec_with_capacity(size_t elements) {
     return new_vec;
 }
 
-void vec_free(Vec* vec) {
+void vec_free(Vec *vec) {
     if (vec == nullptr) return;
 
     free(vec->data); // free(nullptr) is a no-op
+    vec->data = nullptr;
+    vec->len = 0;
+    vec->capacity = 0;
 }
 
-void vec_push(Vec* vec, int data) {
+size_t vec_len(Vec *vec) {
+    if (vec == nullptr) return (size_t)-1; // TODO: Better error handling
+
+    return vec->len;
+}
+
+void vec_push(Vec *vec, int data) {
     if (vec == nullptr) return;
 
     if (vec->data == nullptr) {
