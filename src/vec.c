@@ -1,32 +1,41 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "vec.h"
-
-// Vector of int-s
-typedef struct Vec {
-    void* heap;
-    size_t len; // In bytes
-    size_t capacity; // In bytes
-} Vec;
+#include "vec.h" // Struct is in header
 
 Vec vec_new(void) {
-    Vec new_vec = {
-        nullptr,
-        0,
-        0
-    };
+    Vec new_vec = {nullptr, 0, 0};
     return new_vec;
 }
 
+Vec vec_with_capacity(size_t elements) {
+    Vec new_vec = {nullptr, 0, 0};
+
+    if (elements != 0) {
+        size_t capacity = elements * sizeof(int);
+        new_vec.data = malloc(capacity);
+        
+        if (new_vec.data != nullptr)
+            new_vec.capacity = capacity;
+    }
+
+    return new_vec;
+}
+
+void vec_free(Vec* vec) {
+    if (vec == nullptr) return;
+
+    free(vec->data); // free(nullptr) is a no-op
+}
+
 void vec_push(Vec* vec, int data) {
-    if (vec == nullptr) { return; };
+    if (vec == nullptr) return;
 
-    if (vec->heap == nullptr) {
-        
+    if (vec->data == nullptr) {
+        return;
     } else if (vec->len + sizeof(data) > vec->capacity) {
-
+        return;
     } else {
-        
+        return;
     }
 }
