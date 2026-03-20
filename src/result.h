@@ -1,46 +1,76 @@
 #ifndef RESULT_H_
 #define RESULT_H_
 
-enum Result_Discriminant {
-	Ok,
-	Err,
+#include <stdint.h> // For *int*_t types
+
+// Represented by a bool in memory (standard allows it)
+enum Result_Discriminant : bool {
+	Ok = true,
+	Err = false,
 };
 
-enum Result_Errors {
+enum Result_Errors : uint8_t {
 	ENULLPTR,
 	EMALLFAIL,
+
+	EEMPTY,
+	EBADIDX,
 };
 
 const char * result_strerror(enum Result_Errors input);
 void result_perror(enum Result_Errors input);
 
-// We simulate a template (generics) by macros; every file expands their own
-#define Result(type) typedef struct { \
-	enum Result_Discriminant state; \
-\
+/* Simulated template (generics) by macros. Underlying code:
+```C
+typedef struct Result__type {
+    union {
+		type ok;
+		enum Result_Errors err;
+	} data;
+	enum Result_Discriminant state;
+} Result__type;
+```
+
+Every file expands their own.*/
+#define Result(type) typedef struct Result__##type { \
 	union { \
 		type ok; \
 		enum Result_Errors err; \
 	} data; \
+\
+	enum Result_Discriminant state; \
 } Result__##type;
 
 // The type supplied becomes a pointer (because else it would make issues with the struct's typedef-d name)
-#define Result_ptr(type) typedef struct { \
-	enum Result_Discriminant state; \
-\
+/* Simulated template (generics) by macros. Real type is a pointer to passed type. Underlying code:
+
+```C
+typedef struct Result_ptr__type {
+	union {
+		type *ok;
+		enum Result_Errors err;
+	} data;
+	enum Result_Discriminant state;
+} Result_ptr__type;
+```
+
+Every file expands their own. */
+#define Result_ptr(type) typedef struct Result_ptr__##type { \
 	union { \
 		type *ok; \
 		enum Result_Errors err; \
 	} data; \
+\
+	enum Result_Discriminant state; \
 } Result_ptr__##type;
 
-// Simulates a data-less Result, because you can't have void-typed variables
-typedef struct {
-	enum Result_Discriminant state;
-
+// Simulates a Result__void that contains no Ok data, because you can't have void-typed variables
+typedef struct Result__void {
 	union {
 		enum Result_Errors err;
 	} data;
+
+	enum Result_Discriminant state;
 } Result__void;
 
-#endif
+#endif /* RESULT_H_ */

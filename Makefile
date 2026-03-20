@@ -20,7 +20,7 @@ RUNFLAGS :=
 
 # --- Rules -------------------------------------------------------------------
 # Targets that are not files, but rather names for a recipe
-.PHONY: all run clean check
+.PHONY: all check run clean clean_build clean_run clean_check
 
 # Just in case, but the first non-dot target is the default either way
 .DEFAULT_GOAL := all
@@ -61,3 +61,7 @@ run: all
 	@echo ""
 
 	@$(BIN) $(RUNFLAGS)
+
+clean_build: clean all
+clean_check: clean check
+clean_run: clean run
