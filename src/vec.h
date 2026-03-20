@@ -1,6 +1,13 @@
 #ifndef VEC_H_
 #define VEC_H_
 
+#include "result.h"
+Result(size_t)
+
+#define ALLOC_START ((size_t)32)
+
+// Invariants:
+// If (data == nullptr), then (capacity == 0) and (len == 0)
 typedef struct Vec {
     int *data;
     size_t len; // In bytes
@@ -11,7 +18,7 @@ Vec vec_new(void);
 Vec vec_with_capacity(size_t elements);
 void vec_free(Vec *vec);
 
-size_t vec_len(Vec *vec);
-void vec_push(Vec *vec, int data);
+Result__size_t vec_len(Vec *vec);
+Result__void vec_push(Vec *vec, int input);
 
 #endif
