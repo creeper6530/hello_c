@@ -16,7 +16,7 @@ typedef struct Vec {
 
 Vec vec_new(void);
 Vec vec_with_capacity(size_t elements);
-void vec_free(Vec *vec);
+Result__void vec_free(Vec *vec);
 
 Result__size_t vec_len(Vec *vec);
 Result__void vec_push(Vec *vec, int input);

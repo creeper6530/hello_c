@@ -22,13 +22,22 @@ Vec vec_with_capacity(size_t elements) {
     return new_vec;
 }
 
-void vec_free(Vec *vec) {
-    if (vec == nullptr) return;
+Result__void vec_free(Vec *vec) {
+    Result__void ret;
+
+    if (vec == nullptr) {
+        ret.state = Err;
+        ret.data.err = ENULLPTR;
+        return ret;
+    }
 
     free(vec->data); // free(nullptr) is a no-op
     vec->data = nullptr;
     vec->capacity = 0;
     vec->len = 0;
+
+    ret.state = Ok;
+    return ret;
 }
 
 // Returns number of elements, not bytes!
