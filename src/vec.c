@@ -8,18 +8,25 @@ Vec vec_new(void) {
     return new_vec;
 }
 
-Vec vec_with_capacity(size_t elements) {
+Result__Vec vec_with_capacity(size_t elements) {
     Vec new_vec = {nullptr, 0, 0};
+    Result__Vec ret;
 
     if (elements != 0) {
         size_t new_capacity = elements * sizeof(int);
         new_vec.data = malloc(new_capacity);
         
-        if (new_vec.data != nullptr)
+        if (new_vec.data == nullptr) {
+            ret.state = Err;
+            ret.data.err = EMALLFAIL;
+            return ret;
+        } else
             new_vec.capacity = new_capacity;
     }
 
-    return new_vec;
+    ret.state = Ok;
+    ret.data.ok = new_vec;
+    return ret;
 }
 
 Result__void vec_free(Vec *vec) {

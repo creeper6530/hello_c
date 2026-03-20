@@ -1,9 +1,6 @@
 #ifndef VEC_H_
 #define VEC_H_
 
-#include "result.h"
-Result(size_t)
-
 #define ALLOC_START ((size_t)32)
 
 // Invariants:
@@ -14,8 +11,13 @@ typedef struct Vec {
     size_t capacity; // In bytes
 } Vec;
 
+#include "result.h"
+
+Result(size_t)
+Result(Vec)
+
 Vec vec_new(void);
-Vec vec_with_capacity(size_t elements);
+Result__Vec vec_with_capacity(size_t elements);
 Result__void vec_free(Vec *vec);
 
 Result__size_t vec_len(Vec *vec);

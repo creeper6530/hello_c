@@ -13,8 +13,8 @@ int main(void) {
     size_t len;
     
     if (len_result.state != Ok) {
-        fprintf(stderr, "%s\n", result_err(len_result.data.err));
-        vec_free(&array); // Mitigate a memory leak
+        result_perror(len_result.data.err);
+        vec_free(&array); // Mitigate a memory leak, discard result
         return -1;
     } else {
         len = len_result.data.ok;

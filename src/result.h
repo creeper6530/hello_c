@@ -11,7 +11,8 @@ enum Result_Errors {
 	EMALLFAIL,
 };
 
-const char * result_err(enum Result_Errors input);
+const char * result_strerror(enum Result_Errors input);
+void result_perror(enum Result_Errors input);
 
 // We simulate a template (generics) by macros; every file expands their own
 #define Result(type) typedef struct { \
