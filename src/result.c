@@ -4,6 +4,8 @@
 
 const char * result_strerror(enum Result_Errors input) {
 	switch (input) {
+		case ENOERR: return "No error occured -> misread a zero-initialized field?.";
+
 		case ENULLPTR: return "Null pointer passed as input.";
 		case EMALLFAIL: return "Memory allocation failed.";
 

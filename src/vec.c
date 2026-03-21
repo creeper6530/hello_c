@@ -11,13 +11,11 @@
 void *reallocarray(void *ptr, size_t nmemb, size_t size);
 
 Vec vec_new(void) {
-    Vec new_vec = {nullptr, 0, 0};
-    return new_vec;
+    return (Vec) {nullptr, 0, 0}; // Need the typecast because C can't infer the type of the compound literal from the return type
 }
 
 Result__Vec vec_with_capacity(size_t elements) {
     Vec new_vec = {nullptr, 0, 0};
-    Result__Vec ret;
 
     if (elements != 0) {
         // Zero-initializes the allocated mem, unlike reallocarray used in vec_push()
@@ -26,27 +24,28 @@ Result__Vec vec_with_capacity(size_t elements) {
         if (new_vec.data == nullptr) {
             fprintf(stderr, "vec_with_capacity: malloc failed");
 
-            ret.state = Err;
-            ret.data.err = EMALLFAIL;
-            return ret;
+            return (Result__Vec) {
+                .state = Err,
+                .data.err = EMALLFAIL
+            };
         } else
             new_vec.capacity = elements;
     }
 
-    ret.state = Ok;
-    ret.data.ok = new_vec;
-    return ret;
+    return (Result__Vec) {
+        .state = Ok,
+        .data.ok = new_vec
+    };
 }
 
 Result__void vec_free(Vec *vec) {
-    Result__void ret;
-
     if (vec == nullptr) {
         fprintf(stderr, "vec_free: received nullptr");
 
-        ret.state = Err;
-        ret.data.err = ENULLPTR;
-        return ret;
+        return (Result__void) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
     }
 
     free(vec->data); // free(nullptr) is a no-op
@@ -56,36 +55,37 @@ Result__void vec_free(Vec *vec) {
     vec->capacity = 0;
     vec->len = 0;
 
-    ret.state = Ok;
-    return ret;
+    // Remaining fields not specified (the union) are zero-initialized
+    return (Result__void) {
+        .state = Ok
+    };
 }
 
 // Returns number of elements, not bytes!
 Result__size_t vec_len(Vec *vec) {
-    Result__size_t ret;
-
     if (vec == nullptr) {
         fprintf(stderr, "vec_len: received nullptr");
 
-        ret.state = Err;
-        ret.data.err = ENULLPTR;
-        return ret;
+        return (Result__size_t) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
     }
 
-    ret.state = Ok;
-    ret.data.ok = (vec->len);
-    return ret;
+    return (Result__size_t) {
+        .state = Ok,
+        .data.ok = vec->len
+    };
 }
 
 Result__void vec_push(Vec *vec, int input) {
-    Result__void ret;
-
     if (vec == nullptr) {
         fprintf(stderr, "vec_push: received nullptr");
 
-        ret.state = Err;
-        ret.data.err = ENULLPTR;
-        return ret;
+        return (Result__void) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
     }
 
     // Hopefully the compiler optimizes the double dereferences into a single memory accesses
@@ -102,9 +102,10 @@ Result__void vec_push(Vec *vec, int input) {
         if (allocated == nullptr) {
             fprintf(stderr, "vec_push: reallocarray failed");
 
-            ret.state = Err;
-            ret.data.err = EMALLFAIL;
-            return ret;
+            return (Result__void) {
+                .state = Err,
+                .data.err = EMALLFAIL
+            };
         } else {
             // Resolves value vec->len, then increments it
             allocated[vec->len++] = input;
@@ -114,49 +115,49 @@ Result__void vec_push(Vec *vec, int input) {
         };
     }
 
-    ret.state = Ok;
-    return ret;
+    return (Result__void) {
+        .state = Ok
+    };
 }
 
 // Returns the popped element, or an error if the vector is empty
 Result__int vec_pop(Vec *vec) {
-    Result__int ret;
-
     if (vec == nullptr) {
         fprintf(stderr, "vec_pop: received nullptr");
 
-        ret.state = Err;
-        ret.data.err = ENULLPTR;
-        return ret;
+        return (Result__int) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
     }
 
     // Don't care whether data is nullptr because of invariants
     if (vec->len == 0) {
         fprintf(stderr, "vec_pop: vector is empty");
 
-        ret.state = Err;
-        ret.data.err = EEMPTY;
-
-        return ret;
+        return (Result__int) {
+            .state = Err,
+            .data.err = EEMPTY
+        };
     }
 
     // First decrements vec->len, then resolves the value
     int popped = vec->data[--vec->len];
 
-    ret.state = Ok;
-    ret.data.ok = popped;
-    return ret;
+    return (Result__int) {
+        .state = Ok,
+        .data.ok = popped
+    };
 }
 
 Result__int vec_idx(Vec *vec, ptrdiff_t index) {
-    Result__int ret;
-
     if (vec == nullptr) {
         fprintf(stderr, "vec_idx: received nullptr");
 
-        ret.state = Err;
-        ret.data.err = ENULLPTR;
-        return ret;
+        return (Result__int) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
     }
 
     if (
@@ -166,14 +167,16 @@ Result__int vec_idx(Vec *vec, ptrdiff_t index) {
         // TODO: Implement negative indexing (like Python)
         fprintf(stderr, "vec_idx: index out of bounds");
 
-        ret.state = Err;
-        ret.data.err = EBADIDX;
-        return ret;
+        return (Result__int) {
+            .state = Err,
+            .data.err = EBADIDX
+        };
     }
 
     int element = vec->data[index];
 
-    ret.state = Ok;
-    ret.data.ok = element;
-    return ret;
+    return (Result__int) {
+        .state = Ok,
+        .data.ok = element
+    };
 }

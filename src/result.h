@@ -10,6 +10,8 @@ enum Result_Discriminant : bool {
 };
 
 enum Result_Errors : uint8_t {
+	ENOERR = 0, // Not an actual error, just a placeholder for "no error"
+
 	ENULLPTR,
 	EMALLFAIL,
 
@@ -65,6 +67,7 @@ Every file expands their own. */
 } Result_ptr__##type;
 
 // Simulates a Result__void that contains no Ok data, because you can't have void-typed variables
+// If the state is Ok, the data is uninitialized.
 typedef struct Result__void {
 	union {
 		enum Result_Errors err;
