@@ -9,7 +9,7 @@ const char * result_strerror(enum Result_Errors input) {
 
 		case EEMPTY: return "The data structure is empty.";
 		case EBADIDX: return "The provided index is out of bounds.";
-		
+
 		default: return "Unknown error, should not happen!";
 	};
 }

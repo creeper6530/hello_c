@@ -4,6 +4,12 @@
 #include <stddef.h>
 #include <stdio.h>
 
+// We know our libc supports this, but for some reason the compiler can't see it,
+// so we declare it ourselves based on its man page.
+//
+// Equivalent to realloc(ptr, nmemb * size) but with overflow checking.
+void *reallocarray(void *ptr, size_t nmemb, size_t size);
+
 Vec vec_new(void) {
     Vec new_vec = {nullptr, 0, 0};
     return new_vec;
@@ -14,8 +20,8 @@ Result__Vec vec_with_capacity(size_t elements) {
     Result__Vec ret;
 
     if (elements != 0) {
-        size_t new_capacity = elements * sizeof(int);
-        new_vec.data = malloc(new_capacity);
+        // Zero-initializes the allocated mem, unlike reallocarray used in vec_push()
+        new_vec.data = calloc(elements, sizeof(int));
         
         if (new_vec.data == nullptr) {
             fprintf(stderr, "vec_with_capacity: malloc failed");
@@ -24,7 +30,7 @@ Result__Vec vec_with_capacity(size_t elements) {
             ret.data.err = EMALLFAIL;
             return ret;
         } else
-            new_vec.capacity = new_capacity;
+            new_vec.capacity = elements;
     }
 
     ret.state = Ok;
@@ -67,7 +73,7 @@ Result__size_t vec_len(Vec *vec) {
     }
 
     ret.state = Ok;
-    ret.data.ok = (vec->len / sizeof(int));
+    ret.data.ok = (vec->len);
     return ret;
 }
 
@@ -82,49 +88,31 @@ Result__void vec_push(Vec *vec, int input) {
         return ret;
     }
 
-    // We read len multiple times, so we copy it to a local variable to avoid multiple dereferences
-    size_t len_copy = vec->len;
-
-    if (vec->data == nullptr) {
-        size_t new_capacity = ALLOC_START * sizeof(int);
-        int *allocated = malloc(new_capacity);
-
-        if (allocated == nullptr) {
-            fprintf(stderr, "vec_push: malloc failed");
-
-            ret.state = Err;
-            ret.data.err = EMALLFAIL;
-            return ret;
-        } else {
-            allocated[0] = input;
-
-            vec->data = allocated;
-            vec->capacity = new_capacity;
-            vec->len = sizeof(input);
-        };
-
-    } else if (len_copy + sizeof(input) > vec->capacity) {
-        size_t new_capacity = len_copy * 2 * sizeof(int);
-        int *allocated = realloc(vec->data, new_capacity); // reallocarray() is not in a standard
-
-        if (allocated == nullptr) {
-            fprintf(stderr, "vec_push: realloc failed");
-
-            ret.state = Err;
-            ret.data.err = EMALLFAIL;
-            return ret;
-        } else {
-            allocated[len_copy] = input;
-
-            vec->data = allocated;
-            vec->capacity = new_capacity;
-            vec->len += sizeof(int);
-        }
-
+    // Hopefully the compiler optimizes the double dereferences into a single memory accesses
+    if (vec->len < vec->capacity) {
+        // Resolves value vec->len, then increments it
+        vec->data[vec->len++] = input;
     } else {
-        vec->data[len_copy] = input;
-        vec->len += sizeof(int);
-    };
+        size_t new_capacity = (vec->capacity == 0 ? VEC_ALLOC_START : vec->capacity * VEC_ALLOC_GROWTH_FACTOR);
+
+        fprintf(stderr, "vec_push: capacity reached, resizing to %zu elements\n", new_capacity);
+        // If ptr is NULL, then the call is equivalent to malloc(size), for all values of size.
+        int* allocated = reallocarray(vec->data, new_capacity, sizeof(int));
+
+        if (allocated == nullptr) {
+            fprintf(stderr, "vec_push: reallocarray failed");
+
+            ret.state = Err;
+            ret.data.err = EMALLFAIL;
+            return ret;
+        } else {
+            // Resolves value vec->len, then increments it
+            allocated[vec->len++] = input;
+
+            vec->data = allocated;
+            vec->capacity = new_capacity;
+        };
+    }
 
     ret.state = Ok;
     return ret;
@@ -152,9 +140,8 @@ Result__int vec_pop(Vec *vec) {
         return ret;
     }
 
-    vec->len -= sizeof(int);
-    int last_idx = (vec->len / sizeof(int)); // No -1 because len is already decremented
-    int popped = vec->data[last_idx];
+    // First decrements vec->len, then resolves the value
+    int popped = vec->data[--vec->len];
 
     ret.state = Ok;
     ret.data.ok = popped;
@@ -176,6 +163,7 @@ Result__int vec_idx(Vec *vec, ptrdiff_t index) {
         index < 0 ||
         (size_t)index >= (vec->len / sizeof(int))
     ) {
+        // TODO: Implement negative indexing (like Python)
         fprintf(stderr, "vec_idx: index out of bounds");
 
         ret.state = Err;

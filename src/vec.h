@@ -7,7 +7,12 @@
 
 #include <stddef.h> // For size_t and ptrdiff_t
 
-#define ALLOC_START ((size_t)32)
+// Number of elements to allocate when the first element is pushed to an empty Vec. Must be > 0.
+#define VEC_ALLOC_START ((size_t)1)
+static_assert(VEC_ALLOC_START > 0, "VEC_ALLOC_START must be greater than 0");
+// A factor by which to multiply the capacity when resizing. Must be > 1.
+#define VEC_ALLOC_GROWTH_FACTOR ((size_t)2)
+static_assert(VEC_ALLOC_GROWTH_FACTOR > 1, "VEC_ALLOC_GROWTH_FACTOR must be greater than 1");
 
 // Invariants:
 // If (data == nullptr), then (capacity == 0) and (len == 0),
@@ -15,8 +20,8 @@
 // Always (capacity % sizeof(int) == 0) and (len % sizeof(int) == 0).
 typedef struct Vec {
     int *data;
-    size_t capacity; // In bytes
-    size_t len; // In bytes
+    size_t capacity; // In elements
+    size_t len; // In elements
 } Vec;
 
 
