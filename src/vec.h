@@ -1,7 +1,11 @@
 #ifndef VEC_H_
 #define VEC_H_
 
-#include <stddef.h>
+// https://dev.to/pauljlucas/proper-header-file-etiquette-ola
+// In a header file, include other local headers first, if any, followed by system headers, if any.
+#include "result.h"
+
+#include <stddef.h> // For size_t and ptrdiff_t
 
 #define ALLOC_START ((size_t)32)
 
@@ -15,7 +19,6 @@ typedef struct Vec {
     size_t len; // In bytes
 } Vec;
 
-#include "result.h"
 
 Result(Vec)
 Result(size_t)

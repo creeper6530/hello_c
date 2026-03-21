@@ -1,7 +1,8 @@
+#include "vec.h" // Struct is in header (so that functions can return it by value)
+
 #include <stdlib.h>
 #include <stddef.h>
-
-#include "vec.h" // Struct is in header (so that functions can return it by value)
+#include <stdio.h>
 
 Vec vec_new(void) {
     Vec new_vec = {nullptr, 0, 0};
@@ -17,6 +18,8 @@ Result__Vec vec_with_capacity(size_t elements) {
         new_vec.data = malloc(new_capacity);
         
         if (new_vec.data == nullptr) {
+            fprintf(stderr, "vec_with_capacity: malloc failed");
+
             ret.state = Err;
             ret.data.err = EMALLFAIL;
             return ret;
@@ -33,6 +36,8 @@ Result__void vec_free(Vec *vec) {
     Result__void ret;
 
     if (vec == nullptr) {
+        fprintf(stderr, "vec_free: received nullptr");
+
         ret.state = Err;
         ret.data.err = ENULLPTR;
         return ret;
@@ -54,9 +59,10 @@ Result__size_t vec_len(Vec *vec) {
     Result__size_t ret;
 
     if (vec == nullptr) {
+        fprintf(stderr, "vec_len: received nullptr");
+
         ret.state = Err;
         ret.data.err = ENULLPTR;
-
         return ret;
     }
 
@@ -69,6 +75,8 @@ Result__void vec_push(Vec *vec, int input) {
     Result__void ret;
 
     if (vec == nullptr) {
+        fprintf(stderr, "vec_push: received nullptr");
+
         ret.state = Err;
         ret.data.err = ENULLPTR;
         return ret;
@@ -82,6 +90,8 @@ Result__void vec_push(Vec *vec, int input) {
         int *allocated = malloc(new_capacity);
 
         if (allocated == nullptr) {
+            fprintf(stderr, "vec_push: malloc failed");
+
             ret.state = Err;
             ret.data.err = EMALLFAIL;
             return ret;
@@ -98,6 +108,8 @@ Result__void vec_push(Vec *vec, int input) {
         int *allocated = realloc(vec->data, new_capacity); // reallocarray() is not in a standard
 
         if (allocated == nullptr) {
+            fprintf(stderr, "vec_push: realloc failed");
+
             ret.state = Err;
             ret.data.err = EMALLFAIL;
             return ret;
@@ -123,6 +135,8 @@ Result__int vec_pop(Vec *vec) {
     Result__int ret;
 
     if (vec == nullptr) {
+        fprintf(stderr, "vec_pop: received nullptr");
+
         ret.state = Err;
         ret.data.err = ENULLPTR;
         return ret;
@@ -130,6 +144,8 @@ Result__int vec_pop(Vec *vec) {
 
     // Don't care whether data is nullptr because of invariants
     if (vec->len == 0) {
+        fprintf(stderr, "vec_pop: vector is empty");
+
         ret.state = Err;
         ret.data.err = EEMPTY;
 
@@ -149,6 +165,8 @@ Result__int vec_idx(Vec *vec, ptrdiff_t index) {
     Result__int ret;
 
     if (vec == nullptr) {
+        fprintf(stderr, "vec_idx: received nullptr");
+
         ret.state = Err;
         ret.data.err = ENULLPTR;
         return ret;
@@ -158,6 +176,8 @@ Result__int vec_idx(Vec *vec, ptrdiff_t index) {
         index < 0 ||
         (size_t)index >= (vec->len / sizeof(int))
     ) {
+        fprintf(stderr, "vec_idx: index out of bounds");
+
         ret.state = Err;
         ret.data.err = EBADIDX;
         return ret;

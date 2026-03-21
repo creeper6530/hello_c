@@ -1,6 +1,6 @@
-#include <stdio.h>
-
 #include "result.h"
+
+#include <stdio.h>
 
 const char * result_strerror(enum Result_Errors input) {
 	switch (input) {
