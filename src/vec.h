@@ -25,9 +25,13 @@ typedef struct Vec {
 } Vec;
 
 
-Result(Vec)
-Result(size_t)
-Result(int)
+typedef Result(Vec) Result__Vec;
+typedef Result(size_t) Result__size_t;
+typedef Result(int) Result__int;
+typedef Result_void_ Result__void;
+
+typedef int* intptr;
+typedef Result(intptr) Result__intptr;
 
 Vec vec_new(void);
 Result__Vec vec_with_capacity(size_t elements);
@@ -36,6 +40,6 @@ Result__void vec_free(Vec *vec);
 Result__size_t vec_len(Vec *vec);
 Result__void vec_push(Vec *vec, int input);
 Result__int vec_pop(Vec *vec);
-Result__int vec_idx(Vec *vec, ptrdiff_t index);
+Result__intptr vec_idx(Vec *vec, ptrdiff_t index);
 
 #endif /* VEC_H_ */

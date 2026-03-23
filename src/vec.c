@@ -22,7 +22,7 @@ Result__Vec vec_with_capacity(size_t elements) {
         new_vec.data = calloc(elements, sizeof(int));
         
         if (new_vec.data == nullptr) {
-            fprintf(stderr, "vec_with_capacity: malloc failed");
+            fprintf(stderr, "vec_with_capacity: malloc failed\n");
 
             return (Result__Vec) {
                 .state = Err,
@@ -40,7 +40,7 @@ Result__Vec vec_with_capacity(size_t elements) {
 
 Result__void vec_free(Vec *vec) {
     if (vec == nullptr) {
-        fprintf(stderr, "vec_free: received nullptr");
+        fprintf(stderr, "vec_free: received nullptr\n");
 
         return (Result__void) {
             .state = Err,
@@ -64,7 +64,7 @@ Result__void vec_free(Vec *vec) {
 // Returns number of elements, not bytes!
 Result__size_t vec_len(Vec *vec) {
     if (vec == nullptr) {
-        fprintf(stderr, "vec_len: received nullptr");
+        fprintf(stderr, "vec_len: received nullptr\n");
 
         return (Result__size_t) {
             .state = Err,
@@ -80,7 +80,7 @@ Result__size_t vec_len(Vec *vec) {
 
 Result__void vec_push(Vec *vec, int input) {
     if (vec == nullptr) {
-        fprintf(stderr, "vec_push: received nullptr");
+        fprintf(stderr, "vec_push: received nullptr\n");
 
         return (Result__void) {
             .state = Err,
@@ -100,7 +100,7 @@ Result__void vec_push(Vec *vec, int input) {
         int* allocated = reallocarray(vec->data, new_capacity, sizeof(int));
 
         if (allocated == nullptr) {
-            fprintf(stderr, "vec_push: reallocarray failed");
+            fprintf(stderr, "vec_push: reallocarray failed\n");
 
             return (Result__void) {
                 .state = Err,
@@ -123,7 +123,7 @@ Result__void vec_push(Vec *vec, int input) {
 // Returns the popped element, or an error if the vector is empty
 Result__int vec_pop(Vec *vec) {
     if (vec == nullptr) {
-        fprintf(stderr, "vec_pop: received nullptr");
+        fprintf(stderr, "vec_pop: received nullptr\n");
 
         return (Result__int) {
             .state = Err,
@@ -133,7 +133,7 @@ Result__int vec_pop(Vec *vec) {
 
     // Don't care whether data is nullptr because of invariants
     if (vec->len == 0) {
-        fprintf(stderr, "vec_pop: vector is empty");
+        fprintf(stderr, "vec_pop: vector is empty\n");
 
         return (Result__int) {
             .state = Err,
@@ -150,32 +150,35 @@ Result__int vec_pop(Vec *vec) {
     };
 }
 
-Result__int vec_idx(Vec *vec, ptrdiff_t index) {
+Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
     if (vec == nullptr) {
-        fprintf(stderr, "vec_idx: received nullptr");
+        fprintf(stderr, "vec_idx: received nullptr\n");
 
-        return (Result__int) {
+        return (Result__intptr) {
             .state = Err,
             .data.err = ENULLPTR
         };
     }
 
-    if (
-        index < 0 ||
-        (size_t)index >= (vec->len / sizeof(int))
-    ) {
-        // TODO: Implement negative indexing (like Python)
-        fprintf(stderr, "vec_idx: index out of bounds");
+    // Hopefully optimizes out
+    register ptrdiff_t len = (ptrdiff_t) vec->len;
 
-        return (Result__int) {
+    // Range of permitted indices: -len..len = -len..=(len-1)
+    //if ( index >= len || index < -len ) {
+    if ( !( index >= -len && index < len )) {
+        fprintf(stderr, "vec_idx: index out of bounds\n");
+
+        return (Result__intptr) {
             .state = Err,
             .data.err = EBADIDX
         };
     }
 
-    int element = vec->data[index];
+    int *element = index >= 0 ?
+        vec->data + index :
+        vec->data + (len + index); // Index is already negative, so use `+` for subtraction
 
-    return (Result__int) {
+    return (Result__intptr) {
         .state = Ok,
         .data.ok = element
     };

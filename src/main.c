@@ -29,6 +29,15 @@ int main(void) {
 
     printf("Len: %zu \n", len);
 
+    ptrdiff_t slen = (ptrdiff_t) len;
+
+    for (ptrdiff_t i = -slen; i < slen; i++) {
+        auto res = vec_idx(&array, i);
+
+        assert(res.state == Ok);
+        //fprintf(stderr, "%i\n", *res.data.ok);
+    }
+
     vec_free(&array);
     return 0;
 }
