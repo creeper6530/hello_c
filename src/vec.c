@@ -14,7 +14,7 @@ Vec vec_new(void) {
     return (Vec) {nullptr, 0, 0}; // Need the typecast because C can't infer the type of the compound literal from the return type
 }
 
-Result__Vec vec_with_capacity(size_t elements) {
+Result__Vec vec_with_capacity(const size_t elements) {
     Vec new_vec = {nullptr, 0, 0};
 
     if (elements != 0) {
@@ -38,7 +38,7 @@ Result__Vec vec_with_capacity(size_t elements) {
     };
 }
 
-Result__void vec_free(Vec *vec) {
+Result__void vec_free(Vec * const vec) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_free: received nullptr\n");
 
@@ -62,7 +62,7 @@ Result__void vec_free(Vec *vec) {
 }
 
 // Returns number of elements, not bytes!
-Result__size_t vec_len(Vec *vec) {
+Result__size_t vec_len(const Vec * const vec) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_len: received nullptr\n");
 
@@ -78,7 +78,7 @@ Result__size_t vec_len(Vec *vec) {
     };
 }
 
-Result__void vec_push(Vec *vec, int input) {
+Result__void vec_push(Vec * const vec, const int input) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_push: received nullptr\n");
 
@@ -88,12 +88,13 @@ Result__void vec_push(Vec *vec, int input) {
         };
     }
 
-    // Hopefully the compiler optimizes the double dereferences into a single memory accesses
-    if (vec->len < vec->capacity) {
+    register const size_t capacity = vec->capacity;
+
+    if (vec->len < capacity) {
         // Resolves value vec->len, then increments it
         vec->data[vec->len++] = input;
     } else {
-        size_t new_capacity = (vec->capacity == 0 ? VEC_ALLOC_START : vec->capacity * VEC_ALLOC_GROWTH_FACTOR);
+        register const size_t new_capacity = (capacity == 0 ? VEC_ALLOC_START : capacity * VEC_ALLOC_GROWTH_FACTOR);
 
         fprintf(stderr, "vec_push: capacity reached, resizing to %zu elements\n", new_capacity);
         // If ptr is NULL, then the call is equivalent to malloc(size), for all values of size.
@@ -121,7 +122,7 @@ Result__void vec_push(Vec *vec, int input) {
 }
 
 // Returns the popped element, or an error if the vector is empty
-Result__int vec_pop(Vec *vec) {
+Result__int vec_pop(Vec * const vec) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_pop: received nullptr\n");
 
@@ -141,16 +142,13 @@ Result__int vec_pop(Vec *vec) {
         };
     }
 
-    // First decrements vec->len, then resolves the value
-    int popped = vec->data[--vec->len];
-
     return (Result__int) {
         .state = Ok,
-        .data.ok = popped
+        .data.ok = vec->data[--vec->len] // First decrements vec->len, then resolves the value
     };
 }
 
-Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
+Result__intptr vec_idx(const Vec * const vec, const ptrdiff_t index) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_idx: received nullptr\n");
 
@@ -161,7 +159,7 @@ Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
     }
 
     // Hopefully optimizes out
-    register ptrdiff_t len = (ptrdiff_t) vec->len;
+    register const ptrdiff_t len = (ptrdiff_t) vec->len;
 
     // Range of permitted indices: -len..len = -len..=(len-1)
     //if ( index >= len || index < -len ) {
@@ -174,12 +172,10 @@ Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
         };
     }
 
-    int *element = index >= 0 ?
-        vec->data + index :
-        vec->data + (len + index); // Index is already negative, so use `+` for subtraction
-
     return (Result__intptr) {
         .state = Ok,
-        .data.ok = element
+        .data.ok = index >= 0 ?
+            vec->data + index :
+            vec->data + (len + index) // Index is already negative, so use `+` for subtraction
     };
 }

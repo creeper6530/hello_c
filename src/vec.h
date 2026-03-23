@@ -34,12 +34,15 @@ typedef int* intptr;
 typedef Result(intptr) Result__intptr;
 
 Vec vec_new(void);
-Result__Vec vec_with_capacity(size_t elements);
-Result__void vec_free(Vec *vec);
+Result__Vec vec_with_capacity(const size_t elements);
+Result__void vec_free(Vec * const vec);
 
-Result__size_t vec_len(Vec *vec);
-Result__void vec_push(Vec *vec, int input);
-Result__int vec_pop(Vec *vec);
-Result__intptr vec_idx(Vec *vec, ptrdiff_t index);
+// const int *ptr = pointer to const int = may not change pointee
+// int * const int = const pointer to int = may not change pointer
+// const int * const int = const pointer to const int = may not change pointer nor pointee
+Result__size_t vec_len(const Vec * const vec);
+Result__void vec_push(Vec * const vec, const int input);
+Result__int vec_pop(Vec * const vec);
+Result__intptr vec_idx(const Vec * const vec, const ptrdiff_t index);
 
 #endif /* VEC_H_ */

@@ -29,7 +29,7 @@ int main(void) {
 
     printf("Len: %zu \n", len);
 
-    ptrdiff_t slen = (ptrdiff_t) len;
+    register ptrdiff_t slen = (ptrdiff_t) len;
 
     for (ptrdiff_t i = -slen; i < slen; i++) {
         auto res = vec_idx(&array, i);
