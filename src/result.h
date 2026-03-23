@@ -1,5 +1,7 @@
-#ifndef RESULT_H_
-#define RESULT_H_
+#ifndef RESULT_H
+#define RESULT_H
+
+#include <assert.h>
 
 // Represented by a bool in memory (standard allows it)
 enum Result_Discriminant : bool {
@@ -20,43 +22,57 @@ enum Result_Errors : unsigned char {
 const char * result_strerror(enum Result_Errors input);
 void result_perror(enum Result_Errors input);
 
-/* Simulated template (generics) by macros. Expands into an anonymous struct.
-You must typedef them into a name before using them,
-as two anonymous structs are not the same type even with same fields.
-
+/* Simulated template (generics) by macros. Expands into an anonymous struct and typedef-s it.
+Also defines a static inline function that asserts it's Ok and unwraps it
 If you need multitoken types (like `void*` or `long long`), first typedef them into one token.
 
 Underlying code:
 ```C
-struct {
+typedef struct {
     union {
 		type ok;
 		enum Result_Errors err;
 	} data;
 	enum Result_Discriminant state;
+} Result__type;
+
+static inline type result_unwrap_type (const Result__type *res) {
+	assert(res != nullptr);
+	assert(res->state == Ok);
+	return res->data.ok;
 }
 ```
 
 Every file expands their own.*/
 #define Result(type) \
-struct { \
+typedef struct { \
 	union { \
 		type ok; \
 		enum Result_Errors err; \
 	} data; \
 \
 	enum Result_Discriminant state; \
+} Result__##type; \
+\
+static inline type result_unwrap__##type (const Result__##type *res) { \
+	assert(res != nullptr); \
+	assert(res->state == Ok); \
+	return res->data.ok; \
 }
 
 // Simulates a Result(void) that contains no Ok data, because you can't have void-typed variables
 // If the state is Ok, the data is uninitialized.
-#define Result_void_ \
-struct { \
-	union { \
-		enum Result_Errors err; \
-	} data; \
-\
-	enum Result_Discriminant state; \
+typedef struct {
+	union {
+		enum Result_Errors err;
+	} data;
+
+	enum Result_Discriminant state;
+} Result__void;
+
+static inline void result_unwrap__void (const Result__void *res) {
+	assert(res != nullptr);
+	assert(res->state == Ok);
 }
 
-#endif /* RESULT_H_ */
+#endif /* RESULT_H */

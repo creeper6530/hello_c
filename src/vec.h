@@ -1,5 +1,5 @@
-#ifndef VEC_H_
-#define VEC_H_
+#ifndef VEC_H
+#define VEC_H
 
 // https://dev.to/pauljlucas/proper-header-file-etiquette-ola
 // In a header file, include other local headers first, if any, followed by system headers, if any.
@@ -24,16 +24,21 @@ typedef struct Vec {
     size_t len; // In elements
 } Vec;
 
-
-typedef Result(Vec) Result__Vec;
-typedef Result(size_t) Result__size_t;
-typedef Result(int) Result__int;
-typedef Result_void_ Result__void;
+// Automatically typedef-s these
+Result(Vec)
+Result(size_t)
+Result(int)
 
 typedef int* intptr;
-typedef Result(intptr) Result__intptr;
+Result(intptr)
 
-Vec vec_new(void);
+// MUST be `static` to prevent multiple conflicting definitions
+// SHOULD be `inline` else there's no point in having this in a header
+static inline Vec vec_new(void) {
+    // Need the typecast because C can't infer the type of the compound literal from the return type
+    return (Vec) {nullptr, 0, 0};
+}
+
 Result__Vec vec_with_capacity(size_t elements);
 Result__void vec_free(Vec *vec);
 
@@ -46,4 +51,4 @@ Result__void vec_shrink_to_fit(Vec *vec);
 Result__size_t vec_len(const Vec *vec);
 Result__intptr vec_idx(const Vec *vec, ptrdiff_t index);
 
-#endif /* VEC_H_ */
+#endif /* VEC_H */

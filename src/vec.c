@@ -10,9 +10,7 @@
 // Equivalent to realloc(ptr, nmemb * size) but with overflow checking.
 void *reallocarray(void *ptr, size_t nmemb, size_t size);
 
-Vec vec_new(void) {
-    return (Vec) {nullptr, 0, 0}; // Need the typecast because C can't infer the type of the compound literal from the return type
-}
+// vec_new() defined in header
 
 Result__Vec vec_with_capacity(size_t elements) {
     Vec new_vec = {nullptr, 0, 0};

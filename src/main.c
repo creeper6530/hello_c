@@ -1,3 +1,4 @@
+// Automatically includes `result.h`
 #include "vec.h"
 
 #include <stdio.h>
@@ -10,34 +11,23 @@ int main(void) {
 
     vec_push(&array, 20);
     vec_push(&array, 15);
-    auto pop_result = vec_pop(&array);
-    assert(pop_result.state == Ok && pop_result.data.ok == 15);
+    auto pop_res = vec_pop(&array);
+    assert(result_unwrap__int(&pop_res) == 15);
 
     fprintf(stderr, "Shrinking to fit!\n");
     vec_shrink_to_fit(&array);
     vec_push(&array, 10);
     vec_push(&array, 5);
 
-    auto len_result = vec_len(&array);
-    size_t len;
-
-    if (len_result.state != Ok) {
-        result_perror(len_result.data.err);
-        vec_free(&array); // Mitigate a memory leak, discard result
-        return -1;
-    } else {
-        len = len_result.data.ok;
-    }
-
+    auto res_len = vec_len(&array);
+    size_t len = result_unwrap__size_t(&res_len);
     printf("Len: %zu \n", len);
 
     register ptrdiff_t slen = (ptrdiff_t) len;
 
     for (ptrdiff_t i = -slen; i < slen; i++) {
         auto res = vec_idx(&array, i);
-
-        assert(res.state == Ok);
-        //fprintf(stderr, "%i\n", *res.data.ok);
+        result_unwrap__intptr(&res);
     }
 
     vec_free(&array);

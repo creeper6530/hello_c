@@ -20,7 +20,7 @@ RUNFLAGS :=
 
 # --- Rules -------------------------------------------------------------------
 # Targets that are not files, but rather names for a recipe
-.PHONY: all check run clean clean_build clean_run clean_check
+.PHONY: all check run clean clean_build clean_run clean_check b c r
 
 # Just in case, but the first non-dot target is the default either way
 .DEFAULT_GOAL := all
@@ -65,3 +65,7 @@ run: all
 clean_build: clean all
 clean_check: clean check
 clean_run: clean run
+
+b: all
+c: check
+r: run
