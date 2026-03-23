@@ -37,9 +37,13 @@ Vec vec_new(void);
 Result__Vec vec_with_capacity(size_t elements);
 Result__void vec_free(Vec *vec);
 
-Result__size_t vec_len(Vec *vec);
 Result__void vec_push(Vec *vec, int input);
 Result__int vec_pop(Vec *vec);
-Result__intptr vec_idx(Vec *vec, ptrdiff_t index);
+Result__void vec_shrink_to_fit(Vec *vec);
+
+// `const T *name` = pointer to `const T` (you can't modify T)
+// https://stackoverflow.com/a/21476937
+Result__size_t vec_len(const Vec *vec);
+Result__intptr vec_idx(const Vec *vec, ptrdiff_t index);
 
 #endif /* VEC_H_ */

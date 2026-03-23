@@ -28,8 +28,9 @@ Result__Vec vec_with_capacity(size_t elements) {
                 .state = Err,
                 .data.err = EMALLFAIL
             };
-        } else
-            new_vec.capacity = elements;
+        };
+
+        new_vec.capacity = elements;
     }
 
     return (Result__Vec) {
@@ -61,23 +62,6 @@ Result__void vec_free(Vec *vec) {
     };
 }
 
-// Returns number of elements, not bytes!
-Result__size_t vec_len(Vec *vec) {
-    if (vec == nullptr) {
-        fprintf(stderr, "vec_len: received nullptr\n");
-
-        return (Result__size_t) {
-            .state = Err,
-            .data.err = ENULLPTR
-        };
-    }
-
-    return (Result__size_t) {
-        .state = Ok,
-        .data.ok = vec->len
-    };
-}
-
 Result__void vec_push(Vec *vec, int input) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_push: received nullptr\n");
@@ -98,7 +82,7 @@ Result__void vec_push(Vec *vec, int input) {
 
         fprintf(stderr, "vec_push: capacity reached, resizing to %zu elements\n", new_capacity);
         // If ptr is NULL, then the call is equivalent to malloc(size), for all values of size.
-        int* allocated = reallocarray(vec->data, new_capacity, sizeof(int));
+        int *allocated = reallocarray(vec->data, new_capacity, sizeof(int));
 
         if (allocated == nullptr) {
             fprintf(stderr, "vec_push: reallocarray failed\n");
@@ -107,13 +91,13 @@ Result__void vec_push(Vec *vec, int input) {
                 .state = Err,
                 .data.err = EMALLFAIL
             };
-        } else {
-            // Resolves value vec->len, then increments it
-            allocated[vec->len++] = input;
-
-            vec->data = allocated;
-            vec->capacity = new_capacity;
         };
+
+        // Resolves value vec->len, then increments it
+        allocated[vec->len++] = input;
+
+        vec->data = allocated;
+        vec->capacity = new_capacity;
     }
 
     return (Result__void) {
@@ -148,7 +132,58 @@ Result__int vec_pop(Vec *vec) {
     };
 }
 
-Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
+Result__void vec_shrink_to_fit(Vec *vec) {
+    if (vec == nullptr) {
+        return (Result__void) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
+    }
+
+    if (vec->len == 0) {
+        *vec = (Vec) {nullptr, 0, 0};
+
+        return (Result__void) {
+            .state = Ok
+        };
+    }
+
+    int *allocated = reallocarray(vec->data, vec->len, sizeof(int));
+
+    if (allocated == nullptr) {
+        return (Result__void) {
+            .state = Err,
+            .data.err = EMALLFAIL
+        };
+    }
+
+    vec->data = allocated;
+    vec->capacity = vec->len;
+
+    return (Result__void) {
+        .state = Ok
+    };
+}
+
+// Returns number of elements, not bytes!
+// `const T *name` = pointer to `const T` (you can't modify T)
+Result__size_t vec_len(const Vec *vec) {
+    if (vec == nullptr) {
+        fprintf(stderr, "vec_len: received nullptr\n");
+
+        return (Result__size_t) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
+    }
+
+    return (Result__size_t) {
+        .state = Ok,
+        .data.ok = vec->len
+    };
+}
+
+Result__intptr vec_idx(const Vec *vec, ptrdiff_t index) {
     if (vec == nullptr) {
         fprintf(stderr, "vec_idx: received nullptr\n");
 
@@ -177,6 +212,5 @@ Result__intptr vec_idx(Vec *vec, ptrdiff_t index) {
         .data.ok = index >= 0 ?
             vec->data + index :
             vec->data + (len + index) // Index is already negative, so use `+` for subtraction
-
     };
 }

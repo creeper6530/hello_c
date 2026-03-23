@@ -13,6 +13,8 @@ int main(void) {
     auto pop_result = vec_pop(&array);
     assert(pop_result.state == Ok && pop_result.data.ok == 15);
 
+    fprintf(stderr, "Shrinking to fit!\n");
+    vec_shrink_to_fit(&array);
     vec_push(&array, 10);
     vec_push(&array, 5);
 
