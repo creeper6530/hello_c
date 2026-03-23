@@ -1,1 +1,2 @@
-- Implement negative number indexing
+- Add a VecView with no ownership or capacity information (Rust-style Box<[T]>)
+- Add reserve(), shrink_to_fit(), clear(), is_empty(), extend() / append()

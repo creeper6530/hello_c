@@ -14,18 +14,33 @@ static_assert(VEC_ALLOC_START > 0, "VEC_ALLOC_START must be greater than 0");
 #define VEC_ALLOC_GROWTH_FACTOR ((size_t)2)
 static_assert(VEC_ALLOC_GROWTH_FACTOR > 1, "VEC_ALLOC_GROWTH_FACTOR must be greater than 1");
 
-// Invariants:
-// If (data == nullptr), then (capacity == 0) and (len == 0),
-// otherwise, (capacity > 0) and (len <= capacity).
-// Always (capacity % sizeof(int) == 0) and (len % sizeof(int) == 0).
+/* A simple vector (resizable array) that owns its allocation.
+
+Invariants:
+If (data == nullptr), then (capacity == 0) and (len == 0),
+otherwise, (capacity > 0) and (len <= capacity).
+*/
 typedef struct Vec {
     int *data;
     size_t capacity; // In elements
     size_t len; // In elements
 } Vec;
 
+/* A view into a Vec (or generally any array) that doesn't allow mutation nor has ownership of the allocation.
+Also could be called a fat pointer.
+
+Invariants:
+(data != nullptr) and (len != 0). Unconditionally.
+*/
+typedef struct Slice {
+    int *const data; // T *const name = const pointer to T (you can't modify the pointer)
+    const size_t len; // In elements
+} Slice;
+// TODO: Is it wise to keep these as const?
+
 // Automatically typedef-s these
 Result(Vec)
+Result(Slice)
 Result(size_t)
 Result(int)
 
@@ -48,7 +63,14 @@ Result__void vec_shrink_to_fit(Vec *vec);
 
 // `const T *name` = pointer to `const T` (you can't modify T)
 // https://stackoverflow.com/a/21476937
+// https://cdecl.org/ or https://cdecl.plus/
 Result__size_t vec_len(const Vec *vec);
 Result__intptr vec_idx(const Vec *vec, ptrdiff_t index);
+Result__Slice vec_as_slice(const Vec *vec);
+
+// --------------------------------------------------
+
+Result__size_t slice_len(const Slice *slice);
+Result__intptr slice_idx(const Slice *slice, ptrdiff_t index);
 
 #endif /* VEC_H */

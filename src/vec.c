@@ -163,6 +163,8 @@ Result__void vec_shrink_to_fit(Vec *vec) {
     };
 }
 
+// --------------------------------------------------
+
 // Returns number of elements, not bytes!
 // `const T *name` = pointer to `const T` (you can't modify T)
 Result__size_t vec_len(const Vec *vec) {
@@ -210,5 +212,72 @@ Result__intptr vec_idx(const Vec *vec, ptrdiff_t index) {
         .data.ok = index >= 0 ?
             vec->data + index :
             vec->data + (len + index) // Index is already negative, so use `+` for subtraction
+    };
+}
+
+Result__Slice vec_as_slice(const Vec *vec) {
+    if (vec == nullptr) {
+        fprintf(stderr, "vec_as_slice: received nullptr\n");
+
+        return (Result__Slice) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
+    }
+
+    return (Result__Slice) {
+        .state = Ok,
+        .data.ok = (Slice) {
+            .data = vec->data,
+            .len = vec->len
+        }
+    };
+}
+
+// ==================================================
+
+Result__size_t slice_len(const Slice *slice) {
+    if (slice == nullptr) {
+        fprintf(stderr, "slice_len: received nullptr\n");
+
+        return (Result__size_t) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
+    }
+
+    return (Result__size_t) {
+        .state = Ok,
+        .data.ok = slice->len
+    };
+}
+
+Result__intptr slice_idx(const Slice *slice, ptrdiff_t index) {
+    if (slice == nullptr) {
+        fprintf(stderr, "slice_idx: received nullptr\n");
+
+        return (Result__intptr) {
+            .state = Err,
+            .data.err = ENULLPTR
+        };
+    }
+
+    register ptrdiff_t len = (ptrdiff_t) slice->len;
+
+    // Range of permitted indices: -len..len = -len..=(len-1)
+    if ( !( index >= -len && index < len )) {
+        fprintf(stderr, "slice_idx: index out of bounds\n");
+
+        return (Result__intptr) {
+            .state = Err,
+            .data.err = EBADIDX
+        };
+    }
+
+    return (Result__intptr) {
+        .state = Ok,
+        .data.ok = index >= 0 ?
+            slice->data + index :
+            slice->data + (len + index) // Index is already negative, so use `+` for subtraction
     };
 }

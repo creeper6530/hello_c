@@ -24,11 +24,21 @@ int main(void) {
     printf("Len: %zu \n", len);
 
     register ptrdiff_t slen = (ptrdiff_t) len;
-
     for (ptrdiff_t i = -slen; i < slen; i++) {
         auto res = vec_idx(&array, i);
         result_unwrap__intptr(&res);
     }
+
+    auto slice_res = vec_as_slice(&array);
+    Slice slice = result_unwrap__Slice(&slice_res);
+    auto len_res = slice_len(&slice);
+
+    slen = (ptrdiff_t) result_unwrap__size_t(&len_res);
+    for (ptrdiff_t i = -slen; i < slen; i++) {
+        auto res = slice_idx(&slice, i);
+        result_unwrap__intptr(&res);
+    }
+    printf("Slice len: %zi\n", slen);
 
     vec_free(&array);
     return 0;
