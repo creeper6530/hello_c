@@ -7,3 +7,9 @@ void add_one(int* num) {
         (*num)++;
     }
 }
+
+Vec vec_new(void) {
+    Vec ret = {nullptr, 1, 0};
+
+    return ret;
+}

@@ -1,6 +1,6 @@
-#include <stdio.h>
-
 #include "lib.h"
+
+#include <stdio.h>
 
 int main(void) {
     int num = PI;
@@ -8,4 +8,5 @@ int main(void) {
     printf("num=%d\n", num);
 
     printf("Hello, world!\n");
+    return 0;
 }
