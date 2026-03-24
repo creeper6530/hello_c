@@ -5,3 +5,4 @@ cake_out/
 # Ignore the binaries themselves
 cake
 cake89
+cakeconfig.h
