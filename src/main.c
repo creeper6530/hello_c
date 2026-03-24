@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#include "header.h"
-#include "lib.c"
+#include "lib.h"
 
 int main(void) {
     int num = PI;
