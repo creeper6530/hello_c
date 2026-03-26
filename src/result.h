@@ -65,7 +65,7 @@ static inline type result_unwrap__##type (const Result__##type *res) { \
 typedef struct {
 	union {
 		enum Result_Errors err;
-	} data;
+	}/* data*/; // See https://gcc.gnu.org/onlinedocs/gcc/Unnamed-Fields.html
 
 	enum Result_Discriminant state;
 } Result__void;

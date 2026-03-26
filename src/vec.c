@@ -43,7 +43,7 @@ Result__void vec_free(Vec *vec) {
 
         return (Result__void) {
             .state = Err,
-            .data.err = ENULLPTR
+            ./*data.*/err = ENULLPTR // See https://gcc.gnu.org/onlinedocs/gcc/Unnamed-Fields.html
         };
     }
 
@@ -66,7 +66,7 @@ Result__void vec_push(Vec *vec, int input) {
 
         return (Result__void) {
             .state = Err,
-            .data.err = ENULLPTR
+            ./*data.*/err = ENULLPTR
         };
     }
 
@@ -87,7 +87,7 @@ Result__void vec_push(Vec *vec, int input) {
 
             return (Result__void) {
                 .state = Err,
-                .data.err = EMALLFAIL
+                ./*data.*/err = EMALLFAIL
             };
         };
 
@@ -134,7 +134,7 @@ Result__void vec_shrink_to_fit(Vec *vec) {
     if (vec == nullptr) {
         return (Result__void) {
             .state = Err,
-            .data.err = ENULLPTR
+            ./*data.*/err = ENULLPTR
         };
     }
 
@@ -151,7 +151,7 @@ Result__void vec_shrink_to_fit(Vec *vec) {
     if (allocated == nullptr) {
         return (Result__void) {
             .state = Err,
-            .data.err = EMALLFAIL
+            ./*data.*/err = EMALLFAIL
         };
     }
 

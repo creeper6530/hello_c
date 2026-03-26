@@ -1,2 +1,4 @@
 - Add a VecView with no ownership or capacity information (Rust-style Box<[T]>)
 - Add reserve(), shrink_to_fit(), clear(), is_empty(), extend() / append()
+- Explore [unnamed fields in structs](https://gcc.gnu.org/onlinedocs/gcc/Unnamed-Fields.html)
+- Consider changing the pointers in Vec and Slice to arrays of some type
