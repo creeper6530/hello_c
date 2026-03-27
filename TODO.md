@@ -3,3 +3,5 @@
 - Overall get an idea on what we want to do (some concept art even?)
   - Do we want to support window resizing?
 - Try using the mouse
+
+- Maybe just give up and use a more friendly library than bare ncurses
