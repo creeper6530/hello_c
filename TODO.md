@@ -1,0 +1,5 @@
+- Add robust (or, well, ANY) error handling
+- Start using panels
+- Overall get an idea on what we want to do (some concept art even?)
+  - Do we want to support window resizing?
+- Try using the mouse

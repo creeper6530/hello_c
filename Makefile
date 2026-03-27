@@ -13,9 +13,9 @@ CC      := gcc
 OPT     := -O0 -g3
 WARNS   := -Wall -Wextra -fsanitize=address,leak,undefined \
            -Wshadow -Wundef -Wcast-align -Wfloat-equal
-LIBS    := -lncurses
-CFLAGS  := $(WARNS) $(OPT) $(LIBS) -std=c23 -Wpedantic
-LDFLAGS := -I$(SRC_DIR)
+LIBS    := -lncurses -lpanel
+CFLAGS  := $(WARNS) $(OPT) -std=c23 -Wpedantic
+LDFLAGS := -I$(SRC_DIR) $(LIBS)
 
 RUNFLAGS := 
 
