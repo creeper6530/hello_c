@@ -13,7 +13,7 @@ int main(void) {
     cbreak(); // Disable line buffering; remove character processing (except for interrupts like Ctrl-C)
     keypad(stdscr, true); // Enable parsing escape sequences into function keys, arrow keys and similar
     noecho(); // Don't echo user input to the screen
-    
+
     // Print the message at the current coords - default (y,x) = (0,0)
     printw("Hello, world! Press a non-letter key to exit.");
     refresh(); // Flush the internal buffer to the display
@@ -25,27 +25,35 @@ int main(void) {
     // Leave 5 chars from each side for the X coordinate
     auto central_win = draw_central_window(5, -10);
 
+    mmask_t newmask = BUTTON1_CLICKED;
+    mousemask(newmask, nullptr); // Don't save old mouse mask
+
     int ch;
     while (true) {
         ch = getch(); // Get character - wait for user input
 
         switch (ch) {
             case KEY_RESIZE:
-                getmaxyx(stdscr, size_y, size_x);
+                endwin();
+                fprintf(stderr, "Resizing the window is not currently supported. Please do not the cat.\n");
+                return 1;
 
-                move(1, 0);
-                clrtoeol(); // Clear from cursor to end of line
-                mvprintw(1, 0, "Window size: %ix%i", size_x, size_y);
-
-                recentre_resize_window(central_win, 5, -10);
-
-                // Need to break because else the switch acts just like a bunch of GOTOs and we would fall through
+            case KEY_MOUSE:
+                MEVENT event;
+                if (getmouse(&event) == OK) {
+                    if (event.bstate & BUTTON1_CLICKED) {
+                        mvprintw(4, 0, "Mouse clicked at: %i %i", event.x, event.y);
+                        refresh();
+                    }
+                }
                 break;
 
             // Warning: range expressions are non-standard
             case 'A' ... 'Z': // Emulates an OR, fall-through is desired
             case 'a' ... 'z':
                 mvaddch(2, 0, ch);
+
+                // Need to break because else the switch acts just like a bunch of GOTOs and we would fall through
                 break;
 
             default:
