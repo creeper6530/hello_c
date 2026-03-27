@@ -143,8 +143,9 @@ struct RepaintReturn repaint_all(struct RepaintArray wrapper) {
     wattrset(controls_win, A_BOLD | COLOR_PAIR(2)); // Set color for controls line
     wprintw(controls_win, " Q)uit");
 
+    // Fill the rest of the line with spaces to paint it with the background color
     for (int i = getcurx(controls_win); i < size_x; i++) {
-        waddch(controls_win, ' '); // Fill the rest of the line with spaces to clear it
+        waddch(controls_win, ' ');
     }
 
     wrefresh(controls_win);
