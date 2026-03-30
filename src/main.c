@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 // cdecl.org : declare buffer as pointer to array of char
 void repaint_all(char (*buffer)[]);
@@ -42,6 +43,7 @@ int main(void) {
 
         switch (ch) {
             case KEY_RESIZE:
+                //flash();
                 repaint_all(&input_buf);
                 getmaxyx(central_win, size_y, size_x);
 
@@ -59,9 +61,30 @@ int main(void) {
                 }
                 break;*/
 
-            case '\x18': // Ctrl-X
+            /*case 0x18: // Ctrl-X - eXit*/
+            case KEY_F(10):
                 // Need a GOTO because else we couldn't break out of the infinite looop
                 goto exit;
+
+            /*case 0x08: // Ctrl-Bksp
+            case 0x0C: // Ctrl-L - cLear screen*/
+            case KEY_F(8):
+                memset(input_buf, 0, sizeof input_buf);
+                
+                ungetch(KEY_RESIZE); // Enqueues a resize signal to be processed on the next iteration
+                break;
+
+            case KEY_BACKSPACE:
+                if (input_buf_len == 0) break;
+
+                int curr_x = getcurx(central_win);
+
+                mvwaddch(central_win, 1, --curr_x, ' ');
+                wmove(central_win, 1, curr_x);
+                input_buf[--input_buf_len] = 0;
+
+                wrefresh(central_win);
+                break;
 
             // GCC extension
             case 'A' ... 'Z':
@@ -72,19 +95,6 @@ int main(void) {
 
                 waddch(central_win, ch);
                 input_buf[input_buf_len++] = ch;
-
-                wrefresh(central_win);
-                break;
-
-            case KEY_BACKSPACE:
-                if (input_buf_len == 0) break;
-
-                int curr_y, curr_x;
-                getyx(central_win, curr_y, curr_x);
-
-                mvwaddch(central_win, curr_y, --curr_x, ' ');
-                wmove(central_win, curr_y, curr_x);
-                input_buf[--input_buf_len] = 0;
 
                 wrefresh(central_win);
                 break;
@@ -101,7 +111,9 @@ int main(void) {
     return 0;
 }
 
-// Supports up to 5 windows, but for now we only use two.
+#define CONTROLS_STR " F8 Clear input | F10 Quit"
+
+// Parameter is a character buffer to be written as input after redraw.
 void repaint_all(char (*buffer)[]) {
     if (central_win != nullptr) {
         delwin(central_win);
@@ -129,7 +141,7 @@ void repaint_all(char (*buffer)[]) {
         wattr_on(controls_win, A_BOLD, nullptr);
     }
 
-    wprintw(controls_win, " ^X Quit");
+    wprintw(controls_win, CONTROLS_STR);
     // Fill the rest of the line with spaces to paint it with the background color
     for (int i = getcurx(controls_win); i < size_x; i++) {
         waddch(controls_win, ' ');
