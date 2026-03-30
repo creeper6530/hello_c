@@ -140,20 +140,26 @@ int main(void) {
 
                 wrefresh(central_win);
                 break;
-            
+
             // Who knows which char does Enter key send, so we accept both
             case '\r':
             case '\n':
+                // Resets the screen back to normal temporarily so as not to garble possible crash messages
+                // TODO: Remove once ASan is happy - possibly will stay here for a while more...
                 endwin();
 
-                auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // Size of the message to send (including the flexible array member)
-                WorkerMessage* tx_msg = alloca(tx_msg_size);
-                tx_msg->type = 0x01; // ECHO
-                tx_msg->len = input_buf_len;
-                memset(tx_msg->data, 0, input_buf_len); // Clear the data field before copying the input buffer
-                memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
+                {
+                    auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // Size of the message to send (including the flexible array member)
+                    WorkerMessage* tx_msg = alloca(tx_msg_size);
 
-                auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size); // sizeof omits the flexible array member
+                    tx_msg->type = 0x01; // ECHO
+                    tx_msg->len = input_buf_len;
+
+                    memset(tx_msg->data, 0, input_buf_len); // Clear the data field before copying the input buffer
+                    memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
+
+                    auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size); // sizeof omits the flexible array member
+                } // Drop the alloca-allocated message
 
                 char read_buf[4096];
                 WorkerMessage* rx_msg = (WorkerMessage*) read_buf;
@@ -163,6 +169,7 @@ int main(void) {
                 assert(rx_msg->len == input_buf_len);
                 assert(memcmp(rx_msg->data, input_buf, input_buf_len) == 0);
 
+                // Return control over screen back to ncurses
                 doupdate();
 
                 break;
