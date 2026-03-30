@@ -1,3 +1,5 @@
+#include "backend.h"
+
 #include <ncurses.h>
 #include <panel.h>
 
@@ -5,6 +7,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <threads.h>
 
 // cdecl.org : declare buffer as pointer to array of char
 void repaint_all(char (*buffer)[]);
@@ -33,6 +39,29 @@ int main(void) {
 
     /*mmask_t newmask = BUTTON1_CLICKED;
     mousemask(newmask, nullptr); // Don't save old mouse mask*/
+
+    // ------------------------------
+
+    // fd[0] - read end; fd[1] - write end
+    // File descriptor pair for backend-to-frontend
+    int btf_fds[2];
+    assert(pipe2(btf_fds, O_DIRECT) == 0);
+
+    // File descriptor pair for frontend-to-backend
+    int ftb_fds[2];
+    assert(pipe2(ftb_fds, O_DIRECT) == 0);
+
+    struct WorkerArgs args = {
+        .worker_tx = btf_fds[1],
+        .worker_rx = ftb_fds[0]
+    };
+    int frontend_rx = btf_fds[0];
+    int frontend_tx = ftb_fds[1];
+
+    thrd_t thread;
+    assert(thrd_create(&thread, worker, &args) == thrd_success);
+
+    // ------------------------------
 
     char input_buf[151] = {}; // Zero-inited input buffer (150 chars should suffice)
     int input_buf_len = 0;
