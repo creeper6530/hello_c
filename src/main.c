@@ -3,8 +3,10 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <ctype.h>
 
-void repaint_all(void);
+// cdecl.org : declare buffer as pointer to array of char
+void repaint_all(char (*buffer)[]);
 
 // Globals
 static WINDOW * central_win = nullptr;
@@ -15,7 +17,6 @@ static WINDOW * controls_win = nullptr;
 int main(void) {
     initscr(); // Init the ncurses system; init the terminal into curses mode. Just returns a pointer to stdscr
     cbreak(); // Disable line buffering; remove character processing (except for interrupts like Ctrl-C)
-    keypad(stdscr, true); // Enable parsing escape sequences into function keys, arrow keys and similar
     noecho(); // Don't echo user input to the screen
 
     if (has_colors()) {
@@ -25,18 +26,25 @@ int main(void) {
         init_pair(2, COLOR_BLACK, COLOR_CYAN); // Define color pair 2 as black foreground, cyan background
     }
 
-    repaint_all();
+    repaint_all(nullptr);
+    int size_y, size_x;
+    getmaxyx(central_win, size_y, size_x);
 
     /*mmask_t newmask = BUTTON1_CLICKED;
     mousemask(newmask, nullptr); // Don't save old mouse mask*/
 
+    char input_buf[151] = {}; // Zero-inited input buffer (150 chars should suffice)
+    int input_buf_len = 0;
     int ch;
+
     while (true) {
         ch = wgetch(central_win); // Get character - wait for user input
 
         switch (ch) {
             case KEY_RESIZE:
-                repaint_all();
+                repaint_all(&input_buf);
+                getmaxyx(central_win, size_y, size_x);
+
                 break;
 
             /*case KEY_MOUSE:
@@ -55,6 +63,32 @@ int main(void) {
                 // Need a GOTO because else we couldn't break out of the infinite looop
                 goto exit;
 
+            // GCC extension
+            case 'A' ... 'Z':
+            case 'a' ... 'z':
+            case '0' ... '9':
+            case ' ':
+                if (input_buf_len == size_x - 8) break;
+
+                waddch(central_win, ch);
+                input_buf[input_buf_len++] = ch;
+
+                wrefresh(central_win);
+                break;
+
+            case KEY_BACKSPACE:
+                if (input_buf_len == 0) break;
+
+                int curr_y, curr_x;
+                getyx(central_win, curr_y, curr_x);
+
+                mvwaddch(central_win, curr_y, --curr_x, ' ');
+                wmove(central_win, curr_y, curr_x);
+                input_buf[--input_buf_len] = 0;
+
+                wrefresh(central_win);
+                break;
+
             default: // Nothing, just fall through to the continue
         };
 
@@ -68,7 +102,7 @@ int main(void) {
 }
 
 // Supports up to 5 windows, but for now we only use two.
-void repaint_all(void) {
+void repaint_all(char (*buffer)[]) {
     if (central_win != nullptr) {
         delwin(central_win);
         central_win = nullptr; // Destroy the old dangling pointer
@@ -113,7 +147,10 @@ void repaint_all(void) {
     int greet_start_x = (size_x / 2) - 17; // The greeting message is about 32 chars, so we start it 16 chars before the middle to center it
     mvwprintw(central_win, 0, greet_start_x, " Hello, world! Window size: %ix%i ", size_x, size_y); // Overwrites the box
 
+    keypad(central_win, true); // Enable parsing escape sequences into function keys, arrow keys and similar
     mvwprintw(central_win, 1, 2, ">>> ");
+    if (buffer != nullptr)
+        wprintw(central_win, *buffer);
 
     wrefresh(central_win);
 }
