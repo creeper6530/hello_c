@@ -1,27 +1,60 @@
+// Just for our IDE, the Makefile should define it for us automatically
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // For pipe2 and O_DIRECT
+#endif
+
 #include "backend.h"
 
 #include <ncurses.h>
-#include <panel.h>
-
+//#include <panel.h>
 #include <assert.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
+#include <string.h> // For memset
 
-#include <fcntl.h>
-#include <unistd.h>
+#include <fcntl.h> // For O_DIRECT
+#include <unistd.h> // For pipe2, read, write, close
+//#include <errno.h>
+#include <alloca.h>
+
 #include <threads.h>
+#include <stdatomic.h>
 
 // cdecl.org : declare buffer as pointer to array of char
-void repaint_all(char (*buffer)[]);
+static void repaint_all(char (*buffer)[]);
 
 // Globals
 static WINDOW * central_win = nullptr;
 static WINDOW * controls_win = nullptr;
+static atomic_bool worker_running;
 
 // https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
 // https://github.com/mcdaniel/curses_tutorial
 int main(void) {
+
+    // ------------------------------ INIT BACKEND
+
+    // fd[0] - read end; fd[1] - write end
+    // File descriptor pair for backend-to-frontend
+    int btf_fds[2];
+    assert(pipe2(btf_fds, O_DIRECT) == 0);
+
+    // File descriptor pair for frontend-to-backend
+    int ftb_fds[2];
+    assert(pipe2(ftb_fds, O_DIRECT) == 0);
+
+    int frontend_rx = btf_fds[0]; // fd to read from
+    int frontend_tx = ftb_fds[1]; // fd to write to
+
+    atomic_init(&worker_running, true); // Initialize the worker_running flag to true
+    struct WorkerArgs args = {
+        .worker_tx = btf_fds[1],
+        .worker_rx = ftb_fds[0],
+        .worker_running = &worker_running
+    };
+    thrd_t thread;
+    assert(thrd_create(&thread, worker, &args) == thrd_success);
+
+    // ------------------------------ INIT NCURSES
+
     initscr(); // Init the ncurses system; init the terminal into curses mode. Just returns a pointer to stdscr
     cbreak(); // Disable line buffering; remove character processing (except for interrupts like Ctrl-C)
     noecho(); // Don't echo user input to the screen
@@ -34,37 +67,16 @@ int main(void) {
     }
 
     repaint_all(nullptr);
-    int size_y, size_x;
+    int size_y, size_x; // You can declare multiple vars of same type in one go in C
     getmaxyx(central_win, size_y, size_x);
 
     /*mmask_t newmask = BUTTON1_CLICKED;
     mousemask(newmask, nullptr); // Don't save old mouse mask*/
 
-    // ------------------------------
+    // ------------------------------ MAIN LOOP
 
-    // fd[0] - read end; fd[1] - write end
-    // File descriptor pair for backend-to-frontend
-    int btf_fds[2];
-    assert(pipe2(btf_fds, O_DIRECT) == 0);
-
-    // File descriptor pair for frontend-to-backend
-    int ftb_fds[2];
-    assert(pipe2(ftb_fds, O_DIRECT) == 0);
-
-    struct WorkerArgs args = {
-        .worker_tx = btf_fds[1],
-        .worker_rx = ftb_fds[0]
-    };
-    int frontend_rx = btf_fds[0];
-    int frontend_tx = ftb_fds[1];
-
-    thrd_t thread;
-    assert(thrd_create(&thread, worker, &args) == thrd_success);
-
-    // ------------------------------
-
-    char input_buf[151] = {}; // Zero-inited input buffer (150 chars should suffice)
-    int input_buf_len = 0;
+    char input_buf[150] = {}; // Zero-inited input buffer (150 chars incl. nullterm should suffice)
+    unsigned int input_buf_len = 0;
     int ch;
 
     while (true) {
@@ -120,12 +132,39 @@ int main(void) {
             case 'a' ... 'z':
             case '0' ... '9':
             case ' ':
-                if (input_buf_len == size_x - 8) break;
+                // Cast input_buf_len to signed int to avoid compiler warning
+                if ((signed int)input_buf_len == size_x - 8) break;
 
                 waddch(central_win, ch);
-                input_buf[input_buf_len++] = ch;
+                input_buf[input_buf_len++] = (char)ch;
 
                 wrefresh(central_win);
+                break;
+            
+            // Who knows which char does Enter key send, so we accept both
+            case '\r':
+            case '\n':
+                endwin();
+
+                auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // Size of the message to send (including the flexible array member)
+                WorkerMessage* tx_msg = alloca(tx_msg_size);
+                tx_msg->type = 0x01; // ECHO
+                tx_msg->len = input_buf_len;
+                memset(tx_msg->data, 0, input_buf_len); // Clear the data field before copying the input buffer
+                memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
+
+                auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size); // sizeof omits the flexible array member
+
+                char read_buf[4096];
+                WorkerMessage* rx_msg = (WorkerMessage*) read_buf;
+                auto bytes_read = read(frontend_rx, &read_buf, sizeof read_buf);
+
+                assert(rx_msg->type == 0x01);
+                assert(rx_msg->len == input_buf_len);
+                assert(memcmp(rx_msg->data, input_buf, input_buf_len) == 0);
+
+                doupdate();
+
                 break;
 
             default: // Nothing, just fall through to the continue
@@ -135,15 +174,27 @@ int main(void) {
         exit: break; // Skipped over unless GOTO-ed
     }
 
+    // ------------------------------ CLEANUP AND EXIT
+
     endwin(); // Switch back to normal terminal (calling refresh() or doupdate() after this would resume curses mode)
-    fprintf(stderr, "Exiting...\n"); // Just test a clean exit
+    puts("Exiting...");
+
+    // Close the file descriptors to signal EOF to the worker thread and let it exit cleanly
+    close(frontend_tx);
+
+    int worker_exit_code;
+    thrd_join(thread, &worker_exit_code); // Wait for the worker thread to finish before exiting the program
+    assert(worker_exit_code == 0); // The worker should exit cleanly with code 0
     return 0;
 }
 
 #define CONTROLS_STR " F8 Clear input | F10 Quit"
 
 // Parameter is a character buffer to be written as input after redraw.
-void repaint_all(char (*buffer)[]) {
+static void repaint_all(char (*buffer)[]) {
+
+    // ------------------------------ CLEAR OLD WINDOWS
+
     if (central_win != nullptr) {
         delwin(central_win);
         central_win = nullptr; // Destroy the old dangling pointer
@@ -153,13 +204,11 @@ void repaint_all(char (*buffer)[]) {
         controls_win = nullptr;
     }
 
-    standend(); // Clear all attributes
-    //clear();
-
-    int size_y, size_x; // You can declare multiple vars of same type in one go in C
+    // GET TERMINAL SIZES
+    int size_y, size_x;
     getmaxyx(stdscr, size_y, size_x);
     
-    // ------------------------------
+    // ------------------------------ INIT CONTROLS WINDOW
 
     // size_y - 1 = 1 line from bottom (last line)
     controls_win = newwin(1, size_x, size_y - 1, 0); // nlines, ncols, begin_y, begin_x
@@ -178,7 +227,7 @@ void repaint_all(char (*buffer)[]) {
 
     wrefresh(controls_win);
     
-    // ------------------------------
+    // ------------------------------ INIT CENTRAL WINDOW
 
     // Leave 1 line at the bottom for controls
     central_win = newwin(size_y - 1, size_x, 0, 0); // nlines, ncols, begin_y, begin_x
