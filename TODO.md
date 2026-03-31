@@ -5,3 +5,5 @@
 - Try using the mouse
 
 - Maybe just give up and use a more friendly library than bare ncurses
+
+- Isolate the (de)serialization of structs into functions
