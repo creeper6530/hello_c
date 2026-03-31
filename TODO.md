@@ -7,3 +7,5 @@
 - Maybe just give up and use a more friendly library than bare ncurses
 
 - Isolate the (de)serialization of structs into functions
+- Consider nonblocking backend-to-frontend to keep frontend responsive
+  - Is the worker_running even useful?
