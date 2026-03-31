@@ -12,6 +12,7 @@
 
 #include <stdlib.h>
 #include <threads.h>
+//#include <stdio.h>
 
 
 int worker(void* untyped_args) {
@@ -28,7 +29,7 @@ int worker(void* untyped_args) {
 	// ------------------------------ MAIN LOOP
 
 	// PIPE_BUF is 4096 bytes on Linux
-	char buf[4096];
+	unsigned char buf[4096];
 
 	while (true) {
 
@@ -61,6 +62,11 @@ int worker(void* untyped_args) {
 
 				WorkerMessage* msg = (WorkerMessage*) buf;
 				assert(msg->len == bytes_read - sizeof(WorkerMessage)); // The length field should match the actual data length
+
+				char* string = alloca(msg->len + 1);
+				string[msg->len] = 0;
+				memcpy(string, msg->data, msg->len);
+				//fprintf(stderr, "%s\n", string);
 
 				// If the frontend closes the read end (which it shouldn't), we get a SIGPIPE that (by default) terminates us.
 				auto bytes_written = write(worker_tx, &buf, bytes_read);

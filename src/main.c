@@ -76,7 +76,7 @@ int main(void) {
     // ------------------------------ MAIN LOOP
 
     char input_buf[150] = {}; // Zero-inited input buffer (150 chars incl. nullterm should suffice)
-    unsigned int input_buf_len = 0;
+    int input_buf_len = 0;
     int ch;
 
     while (true) {
@@ -111,6 +111,7 @@ int main(void) {
             case 0x0C: // Ctrl-L - cLear screen*/
             case KEY_F(8):
                 memset(input_buf, 0, sizeof input_buf);
+                input_buf_len = 0;
                 
                 ungetch(KEY_RESIZE); // Enqueues a resize signal to be processed on the next iteration
                 break;
@@ -136,7 +137,7 @@ int main(void) {
                 if ((signed int)input_buf_len == size_x - 8) break;
 
                 waddch(central_win, ch);
-                input_buf[input_buf_len++] = (char)ch;
+                input_buf[input_buf_len++] = (unsigned char)ch;
 
                 wrefresh(central_win);
                 break;
@@ -148,26 +149,38 @@ int main(void) {
                 // TODO: Remove once ASan is happy - possibly will stay here for a while more...
                 endwin();
 
-                {
-                    auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // Size of the message to send (including the flexible array member)
+                //{
+                    auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // sizeof omits the flexible array member
                     WorkerMessage* tx_msg = alloca(tx_msg_size);
-
+                    memset(tx_msg, 0, tx_msg_size); // Zero-initialise the memory
+                    
                     tx_msg->type = 0x01; // ECHO
                     tx_msg->len = input_buf_len;
-
-                    memset(tx_msg->data, 0, input_buf_len); // Clear the data field before copying the input buffer
                     memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
 
-                    auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size); // sizeof omits the flexible array member
-                } // Drop the alloca-allocated message
+                    auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size);
+                    assert(tx_msg_size == (unsigned long)bytes_written); // Crash on error
+                //} // Drop the alloca-allocated message
 
-                char read_buf[4096];
-                WorkerMessage* rx_msg = (WorkerMessage*) read_buf;
-                auto bytes_read = read(frontend_rx, &read_buf, sizeof read_buf);
+                WorkerMessage* rx_msg;
+                {
+                    unsigned char read_buf[4096] = {}; // Allocate a giant buffer statically
+                    WorkerMessage* read_buf_cast = (WorkerMessage*) read_buf;
+                    auto bytes_read = read(frontend_rx, &read_buf, sizeof read_buf);
 
-                assert(rx_msg->type == 0x01);
-                assert(rx_msg->len == input_buf_len);
-                assert(memcmp(rx_msg->data, input_buf, input_buf_len) == 0);
+                    auto rx_len = sizeof(WorkerMessage) + read_buf_cast->len;
+                    assert(rx_len == (unsigned long)bytes_read);
+
+                    rx_msg = alloca(rx_len); // Allocate smaller buffer dynamically
+                    memset(rx_msg, 0, rx_len); // Zero-initialise the memory
+
+                    rx_msg->type = read_buf_cast->type;
+                    rx_msg->len = read_buf_cast->len;
+                    memcpy(rx_msg->data, read_buf_cast->data, read_buf_cast->len);
+                } // Drop the giant buffer
+
+                //assert(memcmp(tx_msg, read_buf_cast, sizeof(WorkerMessage) + input_buf_len) == 0);
+                assert(memcmp(tx_msg, rx_msg, sizeof(WorkerMessage) + input_buf_len) == 0);
 
                 // Return control over screen back to ncurses
                 doupdate();
