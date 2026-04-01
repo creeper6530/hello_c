@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <threads.h>
 //#include <stdio.h>
+#include <alloca.h>
 
 static inline size_t process_command(const char* command, unsigned char (*buffer)[4096]);
 
@@ -104,16 +105,17 @@ int worker(void* untyped_args) {
 				memcpy(reply->data, &buf, out_len);
 
 				auto bytes_written = write(worker_tx, reply, reply_size);
-                assert(reply_size == (unsigned long)bytes_written); // Crash on error
+                if (reply_size != (unsigned long)bytes_written) return 2;
 
 				break;
 			}
 			
 			default: {
-				WorkerMessage* msg = alloca(sizeof(WorkerMessage));
-				memset(msg, 0, sizeof(WorkerMessage));
+				WorkerMessage* msg = alloca(sizeof(WorkerMessage) + 16);
+				memset(msg, 0, sizeof(WorkerMessage) + 16);
 				msg->type = ERR;
-				msg->len = 0;
+				msg->len = 16;
+				memcpy(msg->data, "Invalid command", 16);
 
 				auto bytes_written = write(worker_tx, &msg, bytes_read);
 
@@ -137,11 +139,14 @@ static inline size_t process_command(const char* command, unsigned char (*buffer
 	assert(command != nullptr);
 	assert(buffer != nullptr);
 
-	const char* lipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum id ligula vitae dictum. Nunc urna metus, iaculis quis tempor ac, bibendum sed dui. In quis ornare risus. Maecenas ultricies a justo sed suscipit. Vivamus suscipit ipsum vel elit tristique rhoncus. Quisque suscipit augue ac quam congue laoreet. Sed rutrum at purus lobortis rhoncus. Aliquam varius turpis eros, eu venenatis ante consequat quis. Aenean non ligula pharetra, ullamcorper mi ut, bibendum velit. Vivamus vitae bibendum ligula. Sed feugiat luctus tristique. Nulla sollicitudin pretium dignissim. Aenean nec ipsum ut neque ultrices tincidunt. In hac habitasse platea dictumst. Donec fermentum molestie rhoncus. Duis elementum nisl quis sodales auctor. Vestibulum non sapien quam. Maecenas id massa nunc. Mauris varius euismod porta. Pellentesque id turpis vehicula, rutrum urna id, dapibus ante. Mauris sollicitudin elit vestibulum, porttitor urna ornare, dictum velit. Duis cursus, nibh eget ullamcorper lobortis, justo ipsum volutpat ipsum, at rhoncus sapien tellus non tortor. Sed dolor libero, dapibus sed sodales at, dapibus ut leo. Etiam ut urna vulputate tortor ultricies elementum. Maecenas lobortis commodo erat, non blandit nisi mollis at.\n\nFusce turpis sapien, pharetra nec eros sit amet, porta placerat turpis. Donec vitae est sit amet mauris facilisis auctor et nec orci. Suspendisse efficitur eleifend leo, quis dignissim metus lacinia sit amet. Praesent at dolor ultricies mi bibendum hendrerit. Duis finibus sagittis orci ut tempus.Sed porttitor quam velit, sit amet pellentesque arcu auctor id. Etiam eget dui lacinia, gravida enim sit amet, gravida est. Ut non euismod sapien. Phasellus efficitur lorem vel massa congue, vitae iaculis urna aliquet. Mauris et elit in ex lobortis porttitor vel id orci. Aenean fermentum, ipsum vel sagittis tincidunt, neque nibh posuere est, ut semper tortor magna vitae diam. Vivamus et gravida mauris, a tempor lectus. Suspendisse semper fringilla libero, sed pretium arcu malesuada interdum. Nullam scelerisque, urna dapibus pellentesque cursus, erat purus pellentesque massa, a luctus risus mi eget magna. Duis eros felis, tempor ac neque a, consectetur tempus tellus. Mauris accumsan molestie viverra. Quisque dui ligula, consectetur sed est id, ullamcorper vestibulum arcu. Curabitur dapibus molestie elit, sed scelerisque erat egestas sit amet.\n\nVestibulum ornare lorem mi, sit amet blandit lectus semper nec. Duis dignissim aliquet leo, quis hendrerit mi tincidunt ac. Pellentesque egestas in lorem in gravida. Vivamus maximus finibus nulla, cursus ultrices dui consequat quis. In erat metus, accumsan sit amet justo in, pretium venenatis tortor. Morbi vitae erat ac purus tincidunt porta. Praesent vehicula nisl non bibendum pharetra. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Proin eu erat odio. Morbi eget massa quam. Praesent varius, mauris vitae interdum feugiat, quam felis tempus sem, sed pretium urna magna id diam. Nullam dictum dolor porttitor mollis bibendum. Sed tristique nisi varius augue suscipit, quis finibus leo aliquet.\n\nSed venenatis, lectus quis commodo sagittis, mi nulla volutpat enim, id ullamcorper dolor eros sed augue. Sed vitae venenatis augue, non ultrices diam. Aliquam a egestas est, sit amet faucibus dolor. Sed vel malesuada dui. Nulla eu auctor massa, a aliquam ligula. Donec pellentesque augue ut mi maximus pellentesque. In tempor ornare sapien, a mattis risus facilisis consectetur. Nam ullamcorper, erat vitae feugiat ullamcorper, tellus mauris tempor ipsum, sed ultrices diam nunc vel eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras posuere nisl in nibh venenatis, id ullamcorper dolor suscipit. Aenean et ante eget tellus hendrerit ultricies eget eget ipsum. Ut venenatis pretium erat, molestie sollicitudin odio. Nam vel velit feugiat, egestas eros id, accumsan nisl. Pellentesque sagittis purus nisi, et dignissim diam commodo in. Proin quis porta ante.";
-
-	size_t command_len = strlen(lipsum);
-	assert(command_len + 1 <= 4096);
-	memcpy(buffer, lipsum, command_len + 1); // strlen() omits null terminator
-
-	return command_len + 1; // Don't actually return the null terminator, just write it into the buffer
+	if (strcmp(command, "lipsum") == 0 || strcmp(command, "lorem ipsum") == 0) {
+		const char* lipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum id ligula vitae dictum. Nunc urna metus, iaculis quis tempor ac, bibendum sed dui. In quis ornare risus. Maecenas ultricies a justo sed suscipit. Vivamus suscipit ipsum vel elit tristique rhoncus. Quisque suscipit augue ac quam congue laoreet. Sed rutrum at purus lobortis rhoncus. Aliquam varius turpis eros, eu venenatis ante consequat quis. Aenean non ligula pharetra, ullamcorper mi ut, bibendum velit. Vivamus vitae bibendum ligula. Sed feugiat luctus tristique. Nulla sollicitudin pretium dignissim. Aenean nec ipsum ut neque ultrices tincidunt. In hac habitasse platea dictumst. Donec fermentum molestie rhoncus. Duis elementum nisl quis sodales auctor. Vestibulum non sapien quam. Maecenas id massa nunc. Mauris varius euismod porta. Pellentesque id turpis vehicula, rutrum urna id, dapibus ante. Mauris sollicitudin elit vestibulum, porttitor urna ornare, dictum velit. Duis cursus, nibh eget ullamcorper lobortis, justo ipsum volutpat ipsum, at rhoncus sapien tellus non tortor. Sed dolor libero, dapibus sed sodales at, dapibus ut leo. Etiam ut urna vulputate tortor ultricies elementum. Maecenas lobortis commodo erat, non blandit nisi mollis at.\n\nFusce turpis sapien, pharetra nec eros sit amet, porta placerat turpis. Donec vitae est sit amet mauris facilisis auctor et nec orci. Suspendisse efficitur eleifend leo, quis dignissim metus lacinia sit amet. Praesent at dolor ultricies mi bibendum hendrerit. Duis finibus sagittis orci ut tempus.Sed porttitor quam velit, sit amet pellentesque arcu auctor id. Etiam eget dui lacinia, gravida enim sit amet, gravida est. Ut non euismod sapien. Phasellus efficitur lorem vel massa congue, vitae iaculis urna aliquet. Mauris et elit in ex lobortis porttitor vel id orci. Aenean fermentum, ipsum vel sagittis tincidunt, neque nibh posuere est, ut semper tortor magna vitae diam. Vivamus et gravida mauris, a tempor lectus. Suspendisse semper fringilla libero, sed pretium arcu malesuada interdum. Nullam scelerisque, urna dapibus pellentesque cursus, erat purus pellentesque massa, a luctus risus mi eget magna. Duis eros felis, tempor ac neque a, consectetur tempus tellus. Mauris accumsan molestie viverra. Quisque dui ligula, consectetur sed est id, ullamcorper vestibulum arcu. Curabitur dapibus molestie elit, sed scelerisque erat egestas sit amet.\n\nVestibulum ornare lorem mi, sit amet blandit lectus semper nec. Duis dignissim aliquet leo, quis hendrerit mi tincidunt ac. Pellentesque egestas in lorem in gravida. Vivamus maximus finibus nulla, cursus ultrices dui consequat quis. In erat metus, accumsan sit amet justo in, pretium venenatis tortor. Morbi vitae erat ac purus tincidunt porta. Praesent vehicula nisl non bibendum pharetra. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Proin eu erat odio. Morbi eget massa quam. Praesent varius, mauris vitae interdum feugiat, quam felis tempus sem, sed pretium urna magna id diam. Nullam dictum dolor porttitor mollis bibendum. Sed tristique nisi varius augue suscipit, quis finibus leo aliquet.\n\nSed venenatis, lectus quis commodo sagittis, mi nulla volutpat enim, id ullamcorper dolor eros sed augue. Sed vitae venenatis augue, non ultrices diam. Aliquam a egestas est, sit amet faucibus dolor. Sed vel malesuada dui. Nulla eu auctor massa, a aliquam ligula. Donec pellentesque augue ut mi maximus pellentesque. In tempor ornare sapien, a mattis risus facilisis consectetur. Nam ullamcorper, erat vitae feugiat ullamcorper, tellus mauris tempor ipsum, sed ultrices diam nunc vel eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras posuere nisl in nibh venenatis, id ullamcorper dolor suscipit. Aenean et ante eget tellus hendrerit ultricies eget eget ipsum. Ut venenatis pretium erat, molestie sollicitudin odio. Nam vel velit feugiat, egestas eros id, accumsan nisl. Pellentesque sagittis purus nisi, et dignissim diam commodo in. Proin quis porta ante.";
+		memcpy(buffer, lipsum, 4008);
+		return 4008;
+	} else {
+		size_t command_len = strlen(command);
+		assert(command_len + 1 <= 4096);
+		memcpy(buffer, command, command_len + 1); // strlen() omits null terminator
+		return command_len + 1; // Don't actually return the null terminator, just write it into the buffer
+	}
 }

@@ -22,6 +22,7 @@ static void repaint_all(char (*buffer)[]);
 
 // Globals
 static WINDOW * central_win = nullptr;
+static WINDOW * output_win_border = nullptr;
 static WINDOW * output_win = nullptr;
 static WINDOW * controls_win = nullptr;
 
@@ -116,14 +117,6 @@ int main(void) {
                 break;
 
             case KEY_BACKSPACE:
-                if (just_finished) {
-                    // LIFO
-                    ungetch(ch);
-                    ungetch(KEY_F(8));
-                    just_finished = false;
-                    break;
-                }
-                
                 if (input_buf_len == 0) break;
 
                 int curr_x = getcurx(central_win);
@@ -140,14 +133,6 @@ int main(void) {
             case 'a' ... 'z':
             case '0' ... '9':
             case ' ':
-                if (just_finished) {
-                    // LIFO
-                    ungetch(ch);
-                    ungetch(KEY_F(8));
-                    just_finished = false;
-                    break;
-                }
-
                 // Cast input_buf_len to signed int to avoid compiler warning
                 if ((signed int)input_buf_len == size_x - 8) break;
 
@@ -160,9 +145,8 @@ int main(void) {
             // Who knows which char does Enter key send, so we accept both
             case '\r':
             case '\n':
-                // Resets the screen back to normal temporarily so as not to garble possible crash messages
-                // TODO: Remove once ASan is happy - possibly will stay here for a while more...
-                //endwin();
+
+                // --------------- SEND COMMAND
 
                 {
                     auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // sizeof omits the flexible array member
@@ -179,6 +163,8 @@ int main(void) {
 
                 wmove(output_win, 0, 0);
                 wrefresh(output_win);
+
+                // --------------- RECEIVE REPLY
 
                 WorkerMessage* rx_msg;
                 {
@@ -197,14 +183,23 @@ int main(void) {
                     memcpy(rx_msg->data, read_buf_cast->data, read_buf_cast->len);
                 } // Drop the giant buffer
 
+                // --------------- DRAW REPLY
+
                 //assert(memcmp(tx_msg, rx_msg, sizeof(WorkerMessage) + input_buf_len) == 0);
-                wprintw(output_win, rx_msg->data);
+                wclear(output_win);
+                mvwprintw(output_win, 0, 0, rx_msg->data);
                 wrefresh(output_win);
 
-                just_finished = true;
+                memset(input_buf, 0, sizeof input_buf);
+                input_buf_len = 0;
+                mvwprintw(central_win, 1, 2, ">>> ");
 
-                // Return control over screen back to ncurses
-                //doupdate();
+                for (int i = 6; i < (size_x - 1); i++) {
+                    waddch(central_win, ' ');
+                }
+                wmove(central_win, 1, 6);
+
+                wrefresh(central_win);
 
                 break;
 
@@ -229,7 +224,7 @@ int main(void) {
     return 0;
 }
 
-#define CONTROLS_STR " F8 Clear input | F10 Quit"
+#define CONTROLS_STR " F8 Clear all | F10 Quit"
 
 // Parameter is a character buffer to be written as input after redraw.
 static void repaint_all(char (*buffer)[]) {
@@ -239,6 +234,10 @@ static void repaint_all(char (*buffer)[]) {
     if (output_win != nullptr) {
         delwin(output_win);
         output_win = nullptr; // Destroy the old dangling pointer
+    }
+    if (output_win_border != nullptr) {
+        delwin(output_win_border);
+        output_win_border = nullptr;
     }
     if (central_win != nullptr) {
         delwin(central_win);
@@ -283,21 +282,28 @@ static void repaint_all(char (*buffer)[]) {
     mvwprintw(central_win, 0, greet_start_x, " Hello, world! Window size: %ix%i ", size_x, size_y); // Overwrites the box
 
     keypad(central_win, true); // Enable parsing escape sequences into function keys, arrow keys and similar
+
+    // ------------------------------ INIT OUTPUT SUBWINDOW
+
+    output_win_border = subwin(central_win, size_y - 5, size_x - 4, 3, 2);
+    assert(output_win_border != nullptr);
+    box(output_win_border, '|', '-');
+    wrefresh(output_win_border);
+
+    output_win = subwin(output_win_border, size_y - 7, size_x - 6, 4, 3);
+    assert(output_win != nullptr);
+
+    idlok(output_win, true);
+    scrollok(output_win, true);
+    wrefresh(output_win);
+
+    wmove(central_win, 1, 6);
+
+    // ------------------------------ RE-PRINT INPUT BUFFER
+
     mvwprintw(central_win, 1, 2, ">>> ");
     if (buffer != nullptr)
         wprintw(central_win, *buffer);
 
     wrefresh(central_win);
-
-    // ------------------------------ INIT OUTPUT SUBWINDOW
-
-    output_win = subwin(central_win, size_y - 5, size_x - 4, 3, 2);
-    assert(output_win != nullptr);
-
-    idlok(output_win, true);
-    scrollok(output_win, true);
-    //box(output_win, '|', '-');
-    wrefresh(output_win);
-
-    wmove(central_win, 1, 6);
 }
