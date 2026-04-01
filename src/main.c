@@ -16,7 +16,6 @@
 #include <alloca.h>
 
 #include <threads.h>
-#include <stdatomic.h>
 
 // cdecl.org : declare buffer as pointer to array of char
 static void repaint_all(char (*buffer)[]);
@@ -25,7 +24,6 @@ static void repaint_all(char (*buffer)[]);
 static WINDOW * central_win = nullptr;
 static WINDOW * output_win = nullptr;
 static WINDOW * controls_win = nullptr;
-static atomic_bool worker_running;
 
 // https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
 // https://github.com/mcdaniel/curses_tutorial
@@ -45,11 +43,9 @@ int main(void) {
     int frontend_rx = btf_fds[0]; // fd to read from
     int frontend_tx = ftb_fds[1]; // fd to write to
 
-    atomic_init(&worker_running, true); // Initialize the worker_running flag to true
     struct WorkerArgs args = {
         .worker_tx = btf_fds[1],
-        .worker_rx = ftb_fds[0],
-        .worker_running = &worker_running
+        .worker_rx = ftb_fds[0]
     };
     thrd_t thread;
     assert(thrd_create(&thread, worker, &args) == thrd_success);
@@ -73,6 +69,8 @@ int main(void) {
 
     /*mmask_t newmask = BUTTON1_CLICKED;
     mousemask(newmask, nullptr); // Don't save old mouse mask*/
+
+    bool just_finished = false;
 
     // ------------------------------ MAIN LOOP
 
@@ -134,6 +132,14 @@ int main(void) {
             case 'a' ... 'z':
             case '0' ... '9':
             case ' ':
+                if (just_finished) {
+                    // LIFO
+                    ungetch(ch);
+                    ungetch(KEY_F(8));
+                    just_finished = false;
+                    break;
+                }
+
                 // Cast input_buf_len to signed int to avoid compiler warning
                 if ((signed int)input_buf_len == size_x - 8) break;
 
@@ -148,23 +154,23 @@ int main(void) {
             case '\n':
                 // Resets the screen back to normal temporarily so as not to garble possible crash messages
                 // TODO: Remove once ASan is happy - possibly will stay here for a while more...
-                endwin();
+                //endwin();
 
-                //{
+                {
                     auto tx_msg_size = sizeof(WorkerMessage) + input_buf_len; // sizeof omits the flexible array member
                     WorkerMessage* tx_msg = alloca(tx_msg_size);
                     memset(tx_msg, 0, tx_msg_size); // Zero-initialise the memory
                     
-                    tx_msg->type = ECHO;
+                    tx_msg->type = TASK;
                     tx_msg->len = input_buf_len;
                     memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
 
                     auto bytes_written = write(frontend_tx, tx_msg, tx_msg_size);
                     assert(tx_msg_size == (unsigned long)bytes_written); // Crash on error
-                //} // Drop the alloca-allocated message
+                } // Drop the alloca-allocated message
 
-
-
+                wmove(output_win, 1, 1);
+                wrefresh(output_win);
 
                 WorkerMessage* rx_msg;
                 {
@@ -183,10 +189,14 @@ int main(void) {
                     memcpy(rx_msg->data, read_buf_cast->data, read_buf_cast->len);
                 } // Drop the giant buffer
 
-                assert(memcmp(tx_msg, rx_msg, sizeof(WorkerMessage) + input_buf_len) == 0);
+                //assert(memcmp(tx_msg, rx_msg, sizeof(WorkerMessage) + input_buf_len) == 0);
+                wprintw(output_win, rx_msg->data);
+                wrefresh(output_win);
+
+                just_finished = true;
 
                 // Return control over screen back to ncurses
-                doupdate();
+                //doupdate();
 
                 break;
 
