@@ -116,6 +116,14 @@ int main(void) {
                 break;
 
             case KEY_BACKSPACE:
+                if (just_finished) {
+                    // LIFO
+                    ungetch(ch);
+                    ungetch(KEY_F(8));
+                    just_finished = false;
+                    break;
+                }
+                
                 if (input_buf_len == 0) break;
 
                 int curr_x = getcurx(central_win);
