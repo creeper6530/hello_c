@@ -177,7 +177,7 @@ int main(void) {
                     assert(tx_msg_size == (unsigned long)bytes_written); // Crash on error
                 } // Drop the alloca-allocated message
 
-                wmove(output_win, 1, 1);
+                wmove(output_win, 0, 0);
                 wrefresh(output_win);
 
                 WorkerMessage* rx_msg;
@@ -294,7 +294,9 @@ static void repaint_all(char (*buffer)[]) {
     output_win = subwin(central_win, size_y - 5, size_x - 4, 3, 2);
     assert(output_win != nullptr);
 
-    box(output_win, '|', '-');
+    idlok(output_win, true);
+    scrollok(output_win, true);
+    //box(output_win, '|', '-');
     wrefresh(output_win);
 
     wmove(central_win, 1, 6);
