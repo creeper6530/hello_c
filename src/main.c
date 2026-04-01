@@ -23,6 +23,7 @@ static void repaint_all(char (*buffer)[]);
 
 // Globals
 static WINDOW * central_win = nullptr;
+static WINDOW * output_win = nullptr;
 static WINDOW * controls_win = nullptr;
 static atomic_bool worker_running;
 
@@ -154,7 +155,7 @@ int main(void) {
                     WorkerMessage* tx_msg = alloca(tx_msg_size);
                     memset(tx_msg, 0, tx_msg_size); // Zero-initialise the memory
                     
-                    tx_msg->type = 0x01; // ECHO
+                    tx_msg->type = ECHO;
                     tx_msg->len = input_buf_len;
                     memcpy(tx_msg->data, input_buf, input_buf_len); // Copy the input buffer into the message's data field
 
@@ -162,9 +163,12 @@ int main(void) {
                     assert(tx_msg_size == (unsigned long)bytes_written); // Crash on error
                 //} // Drop the alloca-allocated message
 
+
+
+
                 WorkerMessage* rx_msg;
                 {
-                    unsigned char read_buf[4096] = {}; // Allocate a giant buffer statically
+                    unsigned char read_buf[4096]; // Allocate a giant buffer statically
                     WorkerMessage* read_buf_cast = (WorkerMessage*) read_buf;
                     auto bytes_read = read(frontend_rx, &read_buf, sizeof read_buf);
 
@@ -179,7 +183,6 @@ int main(void) {
                     memcpy(rx_msg->data, read_buf_cast->data, read_buf_cast->len);
                 } // Drop the giant buffer
 
-                //assert(memcmp(tx_msg, read_buf_cast, sizeof(WorkerMessage) + input_buf_len) == 0);
                 assert(memcmp(tx_msg, rx_msg, sizeof(WorkerMessage) + input_buf_len) == 0);
 
                 // Return control over screen back to ncurses
@@ -215,9 +218,13 @@ static void repaint_all(char (*buffer)[]) {
 
     // ------------------------------ CLEAR OLD WINDOWS
 
+    if (output_win != nullptr) {
+        delwin(output_win);
+        output_win = nullptr; // Destroy the old dangling pointer
+    }
     if (central_win != nullptr) {
         delwin(central_win);
-        central_win = nullptr; // Destroy the old dangling pointer
+        central_win = nullptr;
     }
     if (controls_win != nullptr) {
         delwin(controls_win);
@@ -263,4 +270,14 @@ static void repaint_all(char (*buffer)[]) {
         wprintw(central_win, *buffer);
 
     wrefresh(central_win);
+
+    // ------------------------------ INIT OUTPUT SUBWINDOW
+
+    output_win = subwin(central_win, size_y - 5, size_x - 4, 3, 2);
+    assert(output_win != nullptr);
+
+    box(output_win, '|', '-');
+    wrefresh(output_win);
+
+    wmove(central_win, 1, 6);
 }

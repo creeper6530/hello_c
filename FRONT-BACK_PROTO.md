@@ -8,6 +8,10 @@ Only file descriptor that can be closed is the **write** end of Front-to-Back; t
 | ---- | ------- | ----- |
 | 0x00 | NOOP | Does nothing |
 | 0x01 | ECHO | Echoes back the entire message |
+| 0x02 | TASK | Sends a task for the worker to execute; only F->B |
+| 0x03 | WIP | Sends an intermediate progress report; only B->F |
+| 0x04 | DONE | Announces a finished task with data; only B->F |
+| 0x05 | ERR | Reports a non-critical error |
 
 
 # Return code of worker

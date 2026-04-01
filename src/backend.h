@@ -21,6 +21,15 @@ typedef struct WorkerMessage {
 	unsigned char data[]; // Flexible array member for message data (if any)
 } WorkerMessage;
 
+enum MessageTypes {
+	NOOP = 0x00,
+	ECHO = 0x01,
+	TASK = 0x02,
+	WIP = 0x03,
+	DONE = 0x04,
+	ERR = 0x05
+};
+
 int worker(void* args);
 
 #endif /* BACKEND_H */

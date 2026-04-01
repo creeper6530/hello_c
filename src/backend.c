@@ -55,10 +55,11 @@ int worker(void* untyped_args) {
 		// ------------------------------ PROCESS MESSAGE
 
 		switch (buf[0]) {
-			case 0x00: // NOOP
+			case NOOP: {
 				break;
-			
-			case 0x01: // ECHO - just write the same data back to the frontend
+			}
+
+			case ECHO: { // Just write the same data back to the frontend
 
 				WorkerMessage* msg = (WorkerMessage*) buf;
 				assert(msg->len == bytes_read - sizeof(WorkerMessage)); // The length field should match the actual data length
@@ -77,6 +78,8 @@ int worker(void* untyped_args) {
 
 					atomic_store_explicit(worker_running, false, memory_order_release);
 					return 2; // Write error
+
+				// Technically encompasses the previous condition
 				} else if (bytes_written != bytes_read) {
 					// This should never happen with pipes, but just in case
 					atomic_store_explicit(worker_running, false, memory_order_release);
@@ -84,10 +87,27 @@ int worker(void* untyped_args) {
 				}
 
 				break;
+			}
+
+			case TASK: {
+				break;
+			}
 			
-			default:
-				atomic_store_explicit(worker_running, false, memory_order_release);
-				return 127; // Invalid message
+			default: {
+				WorkerMessage* msg = alloca(sizeof(WorkerMessage));
+				memset(msg, 0, sizeof(WorkerMessage));
+				msg->type = ERR;
+				msg->len = 0;
+
+				auto bytes_written = write(worker_tx, &msg, bytes_read);
+
+				if (bytes_written != sizeof(WorkerMessage)) {
+					atomic_store_explicit(worker_running, false, memory_order_release);
+					return 2;
+				}
+
+				break;
+			}
 		}
 		/*continue;
 		exit: break; // Skipped over unless GOTO-ed*/
